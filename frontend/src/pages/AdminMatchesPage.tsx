@@ -1,0 +1,166 @@
+import { CalendarPlus, Swords } from 'lucide-react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { RowSkeleton } from '../components/Skeleton';
+import StatusBadge from '../components/StatusBadge';
+import { EmptyState, PageHeader, TeamCrest } from '../components/ui';
+import { useToast } from '../hooks/useToast';
+import { formatMatchDate } from '../lib/format';
+import { apiError, matchApi } from '../services/api';
+import type { Match, MatchStatus } from '../types';
+
+const STATUSES: { id: MatchStatus; label: string; active: string }[] = [
+  { id: 'open', label: 'Open', active: 'bg-pitch-600 text-white' },
+  { id: 'locked', label: 'Locked', active: 'bg-gold text-ink' },
+  { id: 'closed', label: 'Completed', active: 'bg-ink text-white' },
+];
+
+export default function AdminMatchesPage() {
+  const { notify } = useToast();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [matchName, setMatchName] = useState('');
+  const [teamA, setTeamA] = useState('');
+  const [teamB, setTeamB] = useState('');
+  const [matchDate, setMatchDate] = useState('');
+
+  const refresh = useCallback(async () => setMatches(await matchApi.list()), []);
+
+  useEffect(() => {
+    refresh()
+      .catch((err) => notify(apiError(err, 'Could not load matches'), 'error'))
+      .finally(() => setLoading(false));
+  }, [refresh, notify]);
+
+  async function createMatch(e: FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await matchApi.create({
+        match_name: matchName.trim(),
+        team_a: teamA.trim(),
+        team_b: teamB.trim(),
+        match_date: new Date(matchDate).toISOString(),
+      });
+      setMatchName('');
+      setTeamA('');
+      setTeamB('');
+      setMatchDate('');
+      await refresh();
+      notify('Match scheduled and open for squads', 'success');
+    } catch (err) {
+      notify(apiError(err, 'Could not create match'), 'error');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function setStatus(match: Match, status: MatchStatus) {
+    if (match.status === status) return;
+    setBusyId(match.id);
+    try {
+      await matchApi.setStatus(match.id, status);
+      await refresh();
+      notify(`${match.match_name} is now ${STATUSES.find((s) => s.id === status)?.label.toLowerCase()}`, 'success');
+    } catch (err) {
+      notify(apiError(err, 'Could not update match'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div>
+      <PageHeader eyebrow="Admin console" title="Matches" subtitle="Schedule fixtures and control when squads lock." />
+
+      <div className="grid items-start gap-8 lg:grid-cols-[380px_1fr]">
+        <form className="card space-y-4 lg:sticky lg:top-24" onSubmit={createMatch}>
+          <h2 className="display flex items-center gap-2 text-2xl">
+            <CalendarPlus className="h-5 w-5 text-pitch-600" aria-hidden="true" /> New match
+          </h2>
+          <label className="block">
+            <span className="label">Match name</span>
+            <input className="input" placeholder="e.g. Sunday Derby, Final" value={matchName} onChange={(e) => setMatchName(e.target.value)} required minLength={2} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="label">Team A</span>
+              <input className="input" placeholder="Home side" value={teamA} onChange={(e) => setTeamA(e.target.value)} required />
+            </label>
+            <label className="block">
+              <span className="label">Team B</span>
+              <input className="input" placeholder="Away side" value={teamB} onChange={(e) => setTeamB(e.target.value)} required />
+            </label>
+          </div>
+          {(teamA.trim() || teamB.trim()) && (
+            <div className="flex items-center justify-center gap-3 rounded-xl bg-slate-50 py-3" aria-hidden="true">
+              <TeamCrest name={teamA.trim() || '?'} size="sm" />
+              <span className="font-display text-xs font-extrabold text-slate-400">VS</span>
+              <TeamCrest name={teamB.trim() || '?'} size="sm" />
+            </div>
+          )}
+          <label className="block">
+            <span className="label">Start time</span>
+            <input className="input" type="datetime-local" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} required />
+            <span className="mt-1.5 block text-xs text-slate-500">Squads lock automatically at this time.</span>
+          </label>
+          <p className="rounded-xl bg-gold-soft px-3 py-2 text-xs font-medium text-amber-900">
+            Players are matched to fixtures by team name, so use exactly the same team names as in the player list.
+          </p>
+          <button className="btn-primary w-full !py-3" disabled={creating}>
+            {creating ? 'Scheduling…' : 'Schedule match'}
+          </button>
+        </form>
+
+        <section aria-label="All matches">
+          {loading ? (
+            <RowSkeleton rows={4} />
+          ) : matches.length === 0 ? (
+            <EmptyState icon={<Swords className="h-6 w-6" />} title="No matches yet" body="Use the form to schedule your first fixture." />
+          ) : (
+            <ul className="space-y-4">
+              {matches.map((match) => (
+                <li key={match.id} className="card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex -space-x-2">
+                        <TeamCrest name={match.team_a} size="md" />
+                        <TeamCrest name={match.team_b} size="md" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-ink">{match.match_name}</p>
+                        <p className="truncate text-xs font-medium text-slate-500">
+                          {match.team_a} vs {match.team_b}
+                        </p>
+                        <p className="text-xs font-medium text-slate-400">{formatMatchDate(match.match_date)}</p>
+                      </div>
+                    </div>
+                    <StatusBadge status={match.status} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label={`Status for ${match.match_name}`}>
+                    {STATUSES.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={match.status === s.id}
+                        disabled={busyId === match.id}
+                        onClick={() => void setStatus(match, s.id)}
+                        className={`rounded-lg py-2 text-xs font-bold transition disabled:opacity-60 ${
+                          match.status === s.id ? `${s.active} shadow-sm` : 'text-slate-500 hover:bg-white hover:text-ink'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

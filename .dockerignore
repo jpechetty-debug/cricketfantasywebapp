@@ -1,0 +1,14 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/*.db
+frontend/dist
+frontend/test-results
+frontend/test_login*.mjs
+backend/tests
+.codegraph
+.git
