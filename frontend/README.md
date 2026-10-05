@@ -1,4 +1,4 @@
-Local frontend for Pakka Local Cricket Fantasy League.
+Local frontend for Bachpan Cricket League.
 
 ```bash
 npm install

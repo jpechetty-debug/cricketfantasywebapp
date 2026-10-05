@@ -63,7 +63,7 @@ export default function AppLayout() {
           <Link to={home} className="flex min-w-0 items-center gap-3">
             <Logo className="h-9 w-9 shrink-0" />
             <div className="min-w-0 leading-none">
-              <p className="truncate font-display text-xl font-extrabold uppercase tracking-tight">Pakka League</p>
+              <p className="truncate font-display text-xl font-extrabold uppercase tracking-tight">Bachpan Cricket League</p>
               <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-lime">
                 {isAdmin ? 'Admin console' : 'Local cricket fantasy'}
               </p>

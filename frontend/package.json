@@ -1,5 +1,5 @@
 {
-  "name": "pakka-fantasy-league",
+  "name": "bachpan-cricket-league",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -30,7 +30,7 @@
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   },
-  "description": "Local frontend for Pakka Local Cricket Fantasy League.",
+  "description": "Local frontend for Bachpan Cricket League.",
   "keywords": [],
   "author": "",
   "license": "ISC"

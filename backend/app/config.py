@@ -1,7 +1,7 @@
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-DEV_SECRET = "pakka-fantasy-league-dev-secret-change-in-production"
+DEV_SECRET = "bachpan-cricket-league-dev-secret-change-in-production"
 
 
 class Settings(BaseSettings):
@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     secret_key: str = DEV_SECRET
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
-    database_url: str = "sqlite:///./pakka_fantasy.db"
+    database_url: str = "sqlite:///./bachpan_cricket.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Admin account bootstrapped on startup when it does not exist yet.

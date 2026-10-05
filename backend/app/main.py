@@ -19,7 +19,7 @@ from app.seed import seed_database
 import app.models  # noqa: F401  # register models
 
 logging.basicConfig(level=settings.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-logger = logging.getLogger("pakka")
+logger = logging.getLogger("bachpan")
 
 API_PREFIX = "/api"
 
@@ -43,7 +43,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Pakka Fantasy League",
+    title="Bachpan Cricket League",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None if settings.is_production else "/docs",
@@ -91,7 +91,7 @@ def health():
     except Exception:
         logger.exception("Health check database probe failed")
         return JSONResponse(status_code=503, content={"status": "error", "database": "unavailable"})
-    return {"status": "ok", "app": "Pakka Fantasy League"}
+    return {"status": "ok", "app": "Bachpan Cricket League"}
 
 
 app.include_router(api)

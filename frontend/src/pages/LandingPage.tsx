@@ -28,7 +28,7 @@ export default function LandingPage() {
         <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5">
           <Link to="/" className="flex items-center gap-3">
             <Logo className="h-10 w-10" />
-            <span className="font-display text-2xl font-extrabold uppercase tracking-tight">Pakka League</span>
+            <span className="font-display text-2xl font-extrabold uppercase tracking-tight">Bachpan Cricket League</span>
           </Link>
           <nav className="flex items-center gap-2">
             <Link to="/login" className="btn rounded-xl px-4 text-white hover:bg-white/10">
@@ -129,7 +129,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Pakka Local Cricket Fantasy League</p>
+          <p>Bachpan Cricket League</p>
           <Link to="/admin/login" className="font-semibold hover:text-ink">
             Organiser login
           </Link>

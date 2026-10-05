@@ -23,7 +23,7 @@ export default function AuthShell({
       <div className="floodlit relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
         <Link to="/" className="flex items-center gap-3">
           <Logo className="h-10 w-10" />
-          <span className="font-display text-2xl font-extrabold uppercase tracking-tight">Pakka League</span>
+          <span className="font-display text-2xl font-extrabold uppercase tracking-tight">Bachpan Cricket League</span>
         </Link>
         <div>
           <h2 className="display text-7xl">
@@ -45,7 +45,7 @@ export default function AuthShell({
       <div className="flex flex-col px-4 py-8 sm:px-8">
         <Link to="/" className="mb-10 flex items-center gap-3 lg:hidden">
           <Logo className="h-9 w-9" />
-          <span className="font-display text-xl font-extrabold uppercase tracking-tight">Pakka League</span>
+          <span className="font-display text-xl font-extrabold uppercase tracking-tight">Bachpan Cricket League</span>
         </Link>
         <div className="m-auto w-full max-w-sm animate-slide-up">
           <p className="eyebrow text-pitch-600">{eyebrow}</p>
