@@ -1,11 +1,11 @@
-import { CloudDownload, Link2, TriangleAlert } from 'lucide-react';
+import { CloudDownload, FileUp, Link2, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState, PageHeader, TeamCrest } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { byPlayerName, formatMatchDate, formatPoints } from '../lib/format';
 import { apiError, cricheroesApi, matchApi, playerApi } from '../services/api';
-import type { CricHeroesImportPlayer, CricHeroesPlayer, CricHeroesPreview, Match, Player } from '../types';
+import type { CricHeroesImportPlayer, CricHeroesPdfUpload, CricHeroesPlayer, CricHeroesPreview, Match, Player } from '../types';
 
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
 const NEW = 'new';
@@ -20,6 +20,18 @@ const REASON: Record<CricHeroesPlayer['match_reason'], { label: string; classNam
 const STATUS_LABEL: Record<string, string> = { upcoming: 'Upcoming', live: 'Live', past: 'Completed' };
 
 type Decisions = Record<number, CricHeroesImportPlayer>;
+type Source = 'link' | 'pdf';
+
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? '');
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
+}
 
 function initialDecisions(preview: CricHeroesPreview): Decisions {
   const next: Decisions = {};
@@ -33,7 +45,11 @@ export default function AdminCricHeroesPage() {
   const { notify } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
   const [appPlayers, setAppPlayers] = useState<Player[]>([]);
+  const [source, setSource] = useState<Source>('link');
   const [url, setUrl] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  // The PDF read once at fetch time, so the import re-sends exactly the file that was previewed.
+  const [pdfUpload, setPdfUpload] = useState<CricHeroesPdfUpload | null>(null);
   const [target, setTarget] = useState('');
   const [preview, setPreview] = useState<CricHeroesPreview | null>(null);
   const [decisions, setDecisions] = useState<Decisions>({});
@@ -50,9 +66,12 @@ export default function AdminCricHeroesPage() {
       .catch((err) => notify(apiError(err, 'Could not load matches'), 'error'));
   }, [notify]);
 
-  async function loadPreview() {
+  async function loadPreview(upload: CricHeroesPdfUpload | null = pdfUpload, matchId: string = target) {
+    const match_id = matchId ? Number(matchId) : null;
     const [data, players] = await Promise.all([
-      cricheroesApi.preview({ url: url.trim(), match_id: target ? Number(target) : null }),
+      source === 'pdf' && upload
+        ? cricheroesApi.previewPdf({ ...upload, match_id })
+        : cricheroesApi.preview({ url: url.trim(), match_id }),
       playerApi.list(),
     ]);
     setPreview(data);
@@ -68,9 +87,19 @@ export default function AdminCricHeroesPage() {
     setPreview(null);
     setImportedMatchId(null);
     try {
-      await loadPreview();
+      let upload: CricHeroesPdfUpload | null = null;
+      if (source === 'pdf') {
+        if (!pdfFile) return;
+        if (pdfFile.size > MAX_PDF_BYTES) {
+          notify('That PDF is too large. Upload the scorecard PDF downloaded from CricHeroes', 'error');
+          return;
+        }
+        upload = { pdf_base64: await readAsBase64(pdfFile), filename: pdfFile.name, url: url.trim() || null };
+        setPdfUpload(upload);
+      }
+      await loadPreview(upload);
     } catch (err) {
-      notify(apiError(err, 'Could not read that CricHeroes match'), 'error');
+      notify(apiError(err, source === 'pdf' ? 'Could not read that scorecard PDF' : 'Could not read that CricHeroes match'), 'error');
     } finally {
       setFetching(false);
     }
@@ -100,13 +129,16 @@ export default function AdminCricHeroesPage() {
     if (!preview) return;
     setImporting(true);
     try {
-      const result = await cricheroesApi.import({
-        url: url.trim(),
+      const common = {
         match_id: preview.match_id,
         match_name: creatingMatch ? matchName.trim() || null : null,
         players: Object.values(decisions),
         save_points: savePoints && preview.has_scorecard,
-      });
+      };
+      const result =
+        source === 'pdf' && pdfUpload
+          ? await cricheroesApi.importPdf({ ...pdfUpload, ...common })
+          : await cricheroesApi.import({ url: url.trim(), ...common });
       setImportedMatchId(result.match_id);
       const parts = [
         result.created_match ? 'match created' : null,
@@ -117,7 +149,7 @@ export default function AdminCricHeroesPage() {
       notify(`Imported: ${parts.join(', ') || 'nothing to change'}`, 'success');
       setMatches(await matchApi.list());
       setTarget(String(result.match_id));
-      await loadPreview().catch(() => undefined);
+      await loadPreview(pdfUpload, String(result.match_id)).catch(() => undefined);
     } catch (err) {
       notify(apiError(err, 'Import failed'), 'error');
     } finally {
@@ -134,20 +166,71 @@ export default function AdminCricHeroesPage() {
       <PageHeader
         eyebrow="Admin console"
         title="CricHeroes import"
-        subtitle="Paste a CricHeroes match link to bring in the fixture, the playing XIs and fantasy points from the scorecard."
+        subtitle="Paste a CricHeroes match link, or upload the scorecard PDF, to bring in the fixture, the playing XIs and fantasy points."
       />
 
+      <div className="mb-3 inline-flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Import source">
+        {(
+          [
+            ['link', 'Paste link', Link2],
+            ['pdf', 'Upload PDF', FileUp],
+          ] as const
+        ).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={source === value}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold ${
+              source === value ? 'bg-white text-ink shadow-sm' : 'text-slate-500 hover:text-ink'
+            }`}
+            onClick={() => {
+              setSource(value);
+              setPreview(null);
+              setImportedMatchId(null);
+            }}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+
       <form className="card mb-6 grid gap-4 p-4 sm:grid-cols-[1fr_260px_auto] sm:items-end" onSubmit={onFetch}>
-        <label className="block">
-          <span className="label">CricHeroes match link or ID</span>
-          <input
-            className="input"
-            placeholder="https://cricheroes.com/scorecard/12345678/…"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-          />
-        </label>
+        {source === 'link' ? (
+          <label className="block">
+            <span className="label">CricHeroes match link or ID</span>
+            <input
+              className="input"
+              placeholder="https://cricheroes.com/scorecard/12345678/…"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+            />
+          </label>
+        ) : (
+          <div className="grid gap-3">
+            <label className="block">
+              <span className="label">Scorecard PDF</span>
+              <input
+                className="input file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-bold"
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="label">CricHeroes match link (optional)</span>
+              <input
+                className="input"
+                placeholder="Only needed if you renamed the PDF"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
         <label className="block">
           <span className="label">Import into</span>
           <select className="input" value={target} onChange={(e) => setTarget(e.target.value)}>
@@ -159,17 +242,21 @@ export default function AdminCricHeroesPage() {
             ))}
           </select>
         </label>
-        <button className="btn-primary !py-3" disabled={fetching || !url.trim()}>
-          <CloudDownload className="h-4 w-4" aria-hidden="true" />
-          {fetching ? 'Fetching…' : 'Fetch match'}
+        <button className="btn-primary !py-3" disabled={fetching || (source === 'link' ? !url.trim() : !pdfFile)}>
+          {source === 'link' ? <CloudDownload className="h-4 w-4" aria-hidden="true" /> : <FileUp className="h-4 w-4" aria-hidden="true" />}
+          {fetching ? 'Reading…' : source === 'link' ? 'Fetch match' : 'Read PDF'}
         </button>
       </form>
 
       {!preview ? (
         <EmptyState
-          icon={<Link2 className="h-6 w-6" />}
+          icon={source === 'link' ? <Link2 className="h-6 w-6" /> : <FileUp className="h-6 w-6" />}
           title={fetching ? 'Reading the scorecard…' : 'No match loaded'}
-          body="Open the match in CricHeroes, copy the link from your browser or the app's share button, and paste it above."
+          body={
+            source === 'link'
+              ? "Open the match in CricHeroes, copy the link from your browser or the app's share button, and paste it above."
+              : 'After the match, open the scorecard in CricHeroes, download it as PDF and upload it above. Super overs are not counted.'
+          }
         />
       ) : (
         <>

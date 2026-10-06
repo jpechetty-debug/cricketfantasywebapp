@@ -63,6 +63,21 @@ class CricHeroesImportRequest(CricHeroesPreviewRequest):
     save_points: bool = True
 
 
+class CricHeroesPdfPreviewRequest(BaseModel):
+    # Scorecard PDF downloaded from CricHeroes, base64 encoded (about 4/3 of a 5 MB file at most).
+    pdf_base64: str = Field(min_length=1, max_length=7_000_000)
+    filename: str | None = Field(default=None, max_length=255)
+    # Only needed when the file name does not carry the CricHeroes match id (Scorecard_<id>.pdf).
+    url: str | None = Field(default=None, max_length=500)
+    match_id: int | None = None
+
+
+class CricHeroesPdfImportRequest(CricHeroesPdfPreviewRequest):
+    match_name: str | None = Field(default=None, min_length=2, max_length=200)
+    players: list[ImportPlayer] = Field(default_factory=list, max_length=200)
+    save_points: bool = True
+
+
 class CricHeroesImportResult(BaseModel):
     match_id: int
     created_match: bool

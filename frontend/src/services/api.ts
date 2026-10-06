@@ -5,6 +5,7 @@ import type {
   AuthResponse,
   CricHeroesImportPlayer,
   CricHeroesImportResult,
+  CricHeroesPdfUpload,
   CricHeroesPreview,
   FantasyTeam,
   LeaderboardEntry,
@@ -124,6 +125,17 @@ export const cricheroesApi = {
     players: CricHeroesImportPlayer[];
     save_points: boolean;
   }) => api.post<CricHeroesImportResult>('/cricheroes/import', payload, { timeout: 45000 }).then((r) => r.data),
+  // Scorecard PDF downloaded from CricHeroes; the server never has to reach CricHeroes for these.
+  previewPdf: (payload: CricHeroesPdfUpload & { match_id?: number | null }) =>
+    api.post<CricHeroesPreview>('/cricheroes/pdf/preview', payload, { timeout: 45000 }).then((r) => r.data),
+  importPdf: (
+    payload: CricHeroesPdfUpload & {
+      match_id?: number | null;
+      match_name?: string | null;
+      players: CricHeroesImportPlayer[];
+      save_points: boolean;
+    },
+  ) => api.post<CricHeroesImportResult>('/cricheroes/pdf/import', payload, { timeout: 45000 }).then((r) => r.data),
 };
 
 export default api;

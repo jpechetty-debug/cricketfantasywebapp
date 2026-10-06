@@ -17,7 +17,7 @@ def _bowl(pid, name, wickets, maidens=0, overs="2"):
     return {"player_id": pid, "name": name, "overs": overs, "maidens": maidens, "runs": 12, "wickets": wickets}
 
 
-def page(status="past", with_scorecard=True, team_a="Team A", team_b="Team B") -> str:
+def page(status="past", with_scorecard=True, team_a="Team A", team_b="Team B", extra_innings=()) -> str:
     """A minimal page shaped like a CricHeroes Next.js scorecard: JSON split across RSC push chunks."""
     summary = {
         "status": True,
@@ -54,6 +54,7 @@ def page(status="past", with_scorecard=True, team_a="Team A", team_b="Team B") -
             "to_be_bat": [],
             "bowling": [_bowl(104, "Player 4", 1)],
         },
+        *extra_innings,
     ]
     body = {"tab": "scorecard", "summaryData": summary}
     if with_scorecard:
@@ -89,6 +90,24 @@ def test_parse_page_reads_teams_players_and_stats():
     assert players[101].name == "Player 1" and players[101].is_keeper
     assert players[104].team_id == 10 and players[104].batting == []
     assert players[118].team_id == 20 and players[118].bowling[0].wickets == 2
+
+
+def test_super_over_is_ignored_and_played_side_wins():
+    super_over = {
+        "team_id": 10,
+        "inning": {"inning": 3, "super_over_number": 1},
+        "batting": [_bat(101, "Player 1", 6, "not out")],
+        "to_be_bat": [],
+        "bowling": [_bowl(118, "Player 18", 1, overs="1.0")],
+    }
+    html = page(extra_innings=[super_over])
+    # Player 13 is also listed in Team A's to-bat list, but batted for Team B.
+    html = html.replace('{\\"player_id\\": 104, \\"name\\": \\"Player 4\\"}', '{\\"player_id\\": 104, \\"name\\": \\"Player 4\\"}, {\\"player_id\\": 113, \\"name\\": \\"Player 13\\"}')
+    assert "Player 13" in html.split("to_be_bat", 1)[1].split("bowling", 1)[0]
+    players = {p.cricheroes_player_id: p for p in parse_match_page(html, 555).players}
+    assert [b.runs for b in players[101].batting] == [52]
+    assert [b.wickets for b in players[118].bowling] == [2]
+    assert players[113].team_id == 20
 
 
 def test_missing_match_is_reported():

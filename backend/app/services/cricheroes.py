@@ -16,13 +16,20 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 PAGE_URL = "https://cricheroes.com/scorecard/{match_id}/individual/match/scorecard"
-USER_AGENT = "Mozilla/5.0 (compatible; BachpanCricketLeague/1.0; +https://cricheroes.com)"
+# CricHeroes sits behind Cloudflare, which is stricter with non-browser clients on cloud hosts.
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-IN,en;q=0.9",
+}
 TIMEOUT_SECONDS = 15
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_HOSTS = {"cricheroes.com", "www.cricheroes.com", "cricheroes.in", "www.cricheroes.in"}
 
 _RSC_CHUNK = re.compile(r'self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)')
-_ROLE_MARKER = re.compile(r"\((?:c|vc|wk|c\s*&\s*wk)\)", re.IGNORECASE)
+_ROLE_MARKER = re.compile(r"\(\s*(?:c|vc|wk|c\s*&\s*wk|rhb|lhb)\s*\)", re.IGNORECASE)
 _NON_WORD = re.compile(r"[^0-9a-z]+")
 
 
@@ -101,18 +108,23 @@ def clean_name(name: str) -> str:
 
 
 def normalize_name(name: str) -> str:
-    """Comparison key: case, punctuation and markers ignored."""
-    return " ".join(_NON_WORD.sub(" ", clean_name(name).lower()).split())
+    """Comparison key: case, spacing, punctuation and markers ignored, so "Dr. Arun" == "Drarun"."""
+    return _NON_WORD.sub("", clean_name(name).lower())
 
 
 def fetch_match(match_id: int) -> ChMatch:
     # The URL is always rebuilt from the numeric id, so admins cannot point the server at other hosts.
     url = PAGE_URL.format(match_id=match_id)
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
+    request = urllib.request.Request(url, headers=REQUEST_HEADERS)
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             html = response.read(MAX_PAGE_BYTES + 1).decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            raise CricHeroesError(
+                "CricHeroes blocked the request from this server (HTTP 403). This usually means it is rejecting "
+                "cloud-hosted traffic; try again later"
+            ) from exc
         raise CricHeroesError(f"CricHeroes returned HTTP {exc.code} for match {match_id}") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise CricHeroesError("Could not reach CricHeroes. Try again in a minute") from exc
@@ -199,19 +211,27 @@ def _int(value) -> int:
 def _read_scorecard(match: ChMatch, innings: list) -> None:
     team_ids = {match.team_a.cricheroes_team_id, match.team_b.cricheroes_team_id}
     players: dict[int, ChPlayer] = {}
+    # Scorers sometimes list a player in both squads; the side they actually batted or bowled for wins.
+    confirmed: set[int] = set()
 
-    def player(raw: dict, team_id: int) -> ChPlayer | None:
+    def player(raw: dict, team_id: int, played: bool = True) -> ChPlayer | None:
         pid = _int(raw.get("player_id"))
         if not pid or team_id not in team_ids:
             return None
         if pid not in players:
             players[pid] = ChPlayer(cricheroes_player_id=pid, name=clean_name(str(raw.get("name") or "")), team_id=team_id)
+        if played and pid not in confirmed:
+            players[pid].team_id = team_id
+            confirmed.add(pid)
         if re.search(r"\((?:c\s*&\s*)?wk\)", str(raw.get("name") or ""), re.IGNORECASE):
             players[pid].is_keeper = True
         return players[pid]
 
     for inning in innings:
         if not isinstance(inning, dict):
+            continue
+        # Super overs only break a tie; they do not count towards fantasy points.
+        if isinstance(inning.get("inning"), dict) and inning["inning"].get("super_over_number"):
             continue
         batting_team = _int(inning.get("team_id"))
         fielding_team = next((t for t in team_ids if t != batting_team), 0)
@@ -231,7 +251,7 @@ def _read_scorecard(match: ChMatch, innings: list) -> None:
             if dismissal:
                 match.dismissals.append((fielding_team, dismissal))
         for raw in inning.get("to_be_bat") or []:
-            player(raw, batting_team)
+            player(raw, batting_team, played=False)
         for raw in inning.get("bowling") or []:
             p = player(raw, fielding_team)
             if p:

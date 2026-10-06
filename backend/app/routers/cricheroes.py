@@ -1,4 +1,7 @@
+import base64
+import binascii
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -12,14 +15,18 @@ from app.models.user import User
 from app.schemas.cricheroes import (
     CricHeroesImportRequest,
     CricHeroesImportResult,
+    CricHeroesPdfImportRequest,
+    CricHeroesPdfPreviewRequest,
     CricHeroesPreview,
     CricHeroesPreviewRequest,
+    ImportPlayer,
     PointsLineOut,
     PreviewPlayer,
     PreviewTeam,
 )
 from app.services import cricheroes
 from app.services.cricheroes import ChMatch, CricHeroesError, normalize_name
+from app.services.cricheroes_pdf import parse_scorecard_pdf
 from app.services.fantasy_points import score_match, suggest_role, total
 from app.services.scoring import set_player_points
 
@@ -36,6 +43,29 @@ def _load(url: str) -> ChMatch:
     except CricHeroesError as exc:
         logger.info("CricHeroes lookup failed for %r: %s", url, exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+def _load_pdf(payload: CricHeroesPdfPreviewRequest) -> ChMatch:
+    try:
+        match_id = _pdf_match_id(payload)
+        try:
+            data = base64.b64decode(payload.pdf_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise CricHeroesError("The uploaded file could not be read. Choose the PDF again") from exc
+        return parse_scorecard_pdf(data, match_id)
+    except CricHeroesError as exc:
+        logger.info("CricHeroes PDF import failed for %r: %s", payload.filename, exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+def _pdf_match_id(payload: CricHeroesPdfPreviewRequest) -> int:
+    """The PDF itself has no match id; take it from the link if given, else from CricHeroes' Scorecard_<id>.pdf name."""
+    if payload.url and payload.url.strip():
+        return cricheroes.parse_match_id(payload.url)
+    found = re.search(r"scorecard[_\s-]*(\d+)", payload.filename or "", re.IGNORECASE)
+    if not found:
+        raise CricHeroesError("Could not tell which CricHeroes match this is. Also paste the match link")
+    return int(found.group(1))
 
 
 def _target_match(db: Session, ch: ChMatch, match_id: int | None) -> Match | None:
@@ -86,7 +116,10 @@ def _suggest_players(db: Session, ch: ChMatch, team_names: dict[int, str]) -> di
         same = [
             a.id
             for a in app_players
-            if a.team_name == team and a.id not in taken and a.id not in links and normalize_name(a.player_name) == key
+            if a.team_name == team
+            and a.id not in taken
+            and not _same_kind(links.get(a.id), p.cricheroes_player_id)
+            and normalize_name(a.player_name) == key
         ]
         if len(same) == 1:
             suggestions[p.cricheroes_player_id] = (same[0], "name")
@@ -94,6 +127,11 @@ def _suggest_players(db: Session, ch: ChMatch, team_names: dict[int, str]) -> di
         else:
             suggestions[p.cricheroes_player_id] = (None, "none")
     return suggestions
+
+
+def _same_kind(linked_id: int | None, source_id: int) -> bool:
+    """True when an existing link already ties the player to another id from the same source (link or PDF)."""
+    return linked_id is not None and (linked_id > 0) == (source_id > 0)
 
 
 def _build_preview(db: Session, ch: ChMatch, match: Match | None) -> CricHeroesPreview:
@@ -149,11 +187,35 @@ def preview(payload: CricHeroesPreviewRequest, _: User = Depends(require_admin),
 def import_match(payload: CricHeroesImportRequest, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     # Re-read the page so saved points always come from CricHeroes, never from the client.
     ch = _load(payload.url)
-    match = _target_match(db, ch, payload.match_id)
+    return _import(db, ch, payload.match_id, payload.match_name, payload.players, payload.save_points)
+
+
+@router.post("/pdf/preview", response_model=CricHeroesPreview)
+def preview_pdf(payload: CricHeroesPdfPreviewRequest, _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    ch = _load_pdf(payload)
+    return _build_preview(db, ch, _target_match(db, ch, payload.match_id))
+
+
+@router.post("/pdf/import", response_model=CricHeroesImportResult)
+def import_pdf(payload: CricHeroesPdfImportRequest, _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    # The PDF is sent again and re-parsed, so points never come from the client's preview.
+    ch = _load_pdf(payload)
+    return _import(db, ch, payload.match_id, payload.match_name, payload.players, payload.save_points)
+
+
+def _import(
+    db: Session,
+    ch: ChMatch,
+    match_id: int | None,
+    match_name: str | None,
+    entries: list[ImportPlayer],
+    save_points: bool,
+) -> CricHeroesImportResult:
+    match = _target_match(db, ch, match_id)
     created_match = match is None
     if match is None:
         match = Match(
-            match_name=(payload.match_name or f"{ch.team_a.name} vs {ch.team_b.name}").strip()[:200],
+            match_name=(match_name or f"{ch.team_a.name} vs {ch.team_b.name}").strip()[:200],
             team_a=ch.team_a.name[:120],
             team_b=ch.team_b.name[:120],
             match_date=ch.start_time or utcnow(),
@@ -167,17 +229,17 @@ def import_match(payload: CricHeroesImportRequest, _: User = Depends(require_adm
     team_names = _team_names(ch, match)
     ch_players = {p.cricheroes_player_id: p for p in ch.players}
     lines, warnings = score_match(ch)
-    unknown = [entry.cricheroes_player_id for entry in payload.players if entry.cricheroes_player_id not in ch_players]
+    unknown = [entry.cricheroes_player_id for entry in entries if entry.cricheroes_player_id not in ch_players]
     if unknown:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Some players are not part of this CricHeroes match")
-    chosen = [entry.player_id for entry in payload.players if not entry.skip and entry.player_id is not None]
+    chosen = [entry.player_id for entry in entries if not entry.skip and entry.player_id is not None]
     if len(chosen) != len(set(chosen)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each app player can only be linked once")
 
     existing = {p.id: p for p in db.query(Player).filter(Player.id.in_(chosen))} if chosen else {}
     created = linked = 0
     points: dict[int, float] = {}
-    for entry in payload.players:
+    for entry in entries:
         if entry.skip:
             continue
         source = ch_players[entry.cricheroes_player_id]
@@ -197,13 +259,15 @@ def import_match(payload: CricHeroesImportRequest, _: User = Depends(require_adm
             linked += 1
         link = db.query(CricHeroesPlayerLink).filter(CricHeroesPlayerLink.player_id == player.id).first()
         if link:
-            link.cricheroes_player_id = source.cricheroes_player_id
+            # A real CricHeroes id is better than a PDF name id, so a PDF import never replaces one.
+            if source.cricheroes_player_id > 0 or link.cricheroes_player_id < 0:
+                link.cricheroes_player_id = source.cricheroes_player_id
         else:
             db.add(CricHeroesPlayerLink(player_id=player.id, cricheroes_player_id=source.cricheroes_player_id))
         if ch.has_scorecard:
             points[player.id] = total(lines.get(source.cricheroes_player_id, []))
 
-    if payload.save_points and points:
+    if save_points and points:
         set_player_points(db, match.id, points)
     db.commit()
     logger.info("Imported CricHeroes match %s into match %s", ch.cricheroes_match_id, match.id)
@@ -212,6 +276,6 @@ def import_match(payload: CricHeroesImportRequest, _: User = Depends(require_adm
         created_match=created_match,
         players_created=created,
         players_linked=linked,
-        points_saved=len(points) if payload.save_points else 0,
+        points_saved=len(points) if save_points else 0,
         warnings=warnings,
     )

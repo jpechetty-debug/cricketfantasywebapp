@@ -106,6 +106,13 @@ export interface CricHeroesImportPlayer {
   skip: boolean;
 }
 
+export interface CricHeroesPdfUpload {
+  pdf_base64: string;
+  filename: string;
+  // Only needed when the file name is not CricHeroes' Scorecard_<match id>.pdf.
+  url: string | null;
+}
+
 export interface CricHeroesImportResult {
   match_id: number;
   created_match: boolean;
