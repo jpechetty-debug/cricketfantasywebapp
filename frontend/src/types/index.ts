@@ -61,6 +61,17 @@ export interface AdminStats {
   total_teams: number;
 }
 
+export interface MatchWinners {
+  match_id: number;
+  match_name: string;
+  team_a: string;
+  team_b: string;
+  match_date: string;
+  squads: number;
+  // Top 3 places; tied squads share a place, so there can be more than three.
+  winners: { rank: number; user_id: number; name: string; mobile: string | null; points: number }[];
+}
+
 export interface AuthState {
   token: string;
   role: Role;

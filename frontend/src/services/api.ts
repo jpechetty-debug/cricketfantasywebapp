@@ -11,6 +11,7 @@ import type {
   LeaderboardEntry,
   Match,
   MatchStatus,
+  MatchWinners,
   Player,
   UserProfile,
 } from '../types';
@@ -112,6 +113,7 @@ export const leaderboardApi = {
 
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
+  winners: () => api.get<MatchWinners[]>('/admin/winners').then((r) => r.data),
 };
 
 // Fetching from CricHeroes can be slow, so these calls get a longer timeout.

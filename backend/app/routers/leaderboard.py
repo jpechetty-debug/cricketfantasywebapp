@@ -17,6 +17,10 @@ def leaderboard(match_id: int, _: User = Depends(get_current_user), db: Session 
     match = db.query(Match).filter(Match.id == match_id).first()
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
+    return ranked_entries(db, match_id)
+
+
+def ranked_entries(db: Session, match_id: int) -> list[LeaderboardEntry]:
     scores = player_score_map(db, match_id)
     rows = (
         db.query(FantasyTeam, User.name)
