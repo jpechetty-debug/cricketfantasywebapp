@@ -1,5 +1,6 @@
 import { ArrowRight, Crown, ListChecks, PenLine, Trophy } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
+import FeaturedPoster from '../components/FeaturedPoster';
 import { Logo, TeamCrest } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 
@@ -108,6 +109,10 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 pt-12 empty:hidden lg:pt-16">
+        <FeaturedPoster to="/register" cta="Join and pick your 7" />
       </div>
 
       <section className="mx-auto max-w-6xl px-4 py-16 lg:py-24">

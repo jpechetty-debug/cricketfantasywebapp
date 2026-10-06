@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 PAGE_URL = "https://cricheroes.com/scorecard/{match_id}/individual/match/scorecard"
+# Matches that haven't started publish their details only on the "upcoming" tab.
+UPCOMING_URL = "https://cricheroes.com/scorecard/{match_id}/individual/match/upcoming"
 # CricHeroes sits behind Cloudflare, which is stricter with non-browser clients on cloud hosts.
 REQUEST_HEADERS = {
     "User-Agent": (
@@ -35,6 +37,10 @@ _NON_WORD = re.compile(r"[^0-9a-z]+")
 
 class CricHeroesError(Exception):
     """The match could not be read; the message is safe to show to an admin."""
+
+
+class NoMatchDetails(CricHeroesError):
+    """The page loaded but carries no match summary (e.g. the scorecard tab of an upcoming match)."""
 
 
 @dataclass
@@ -113,8 +119,14 @@ def normalize_name(name: str) -> str:
 
 
 def fetch_match(match_id: int) -> ChMatch:
-    # The URL is always rebuilt from the numeric id, so admins cannot point the server at other hosts.
-    url = PAGE_URL.format(match_id=match_id)
+    # URLs are always rebuilt from the numeric id, so admins cannot point the server at other hosts.
+    try:
+        return parse_match_page(_download(PAGE_URL.format(match_id=match_id), match_id), match_id)
+    except NoMatchDetails:
+        return parse_upcoming_page(_download(UPCOMING_URL.format(match_id=match_id), match_id), match_id)
+
+
+def _download(url: str, match_id: int) -> str:
     request = urllib.request.Request(url, headers=REQUEST_HEADERS)
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -130,17 +142,15 @@ def fetch_match(match_id: int) -> ChMatch:
         raise CricHeroesError("Could not reach CricHeroes. Try again in a minute") from exc
     if len(html) > MAX_PAGE_BYTES:
         raise CricHeroesError("The CricHeroes page was unexpectedly large")
-    return parse_match_page(html, match_id)
+    return html
 
 
 def parse_match_page(html: str, match_id: int) -> ChMatch:
-    if re.search(r"<title>\s*CricHeroes:\s*(404|410)", html):
-        raise CricHeroesError(f"CricHeroes match {match_id} was not found, or it is private")
-    payload = "".join(json.loads(f'"{chunk}"') for chunk in _RSC_CHUNK.findall(html))
+    payload = _payload(html, match_id)
     summary = _find_json(payload, "summaryData", "{")
     data = summary.get("data") if isinstance(summary, dict) else None
     if not isinstance(data, dict) or not isinstance(data.get("team_a"), dict):
-        raise CricHeroesError(
+        raise NoMatchDetails(
             "CricHeroes has not published details for this match yet, or its page format changed"
         )
 
@@ -161,6 +171,56 @@ def parse_match_page(html: str, match_id: int) -> ChMatch:
     if not match.players:
         _read_squads(match, _find_json(payload, "teamSquad", "{"))
     return match
+
+
+def parse_upcoming_page(html: str, match_id: int) -> ChMatch:
+    """An upcoming match: fixture details, plus players once CricHeroes marks the playing XIs."""
+    payload = _payload(html, match_id)
+    info = _find_json(payload, "matchInfo", "{")
+    data = info.get("data") if isinstance(info, dict) else None
+    if not isinstance(data, dict) or not data.get("team_a_id") or not data.get("team_b_id"):
+        raise CricHeroesError("CricHeroes has not published details for this match yet, or its page format changed")
+    team_a = _team({"id": data["team_a_id"], "name": data.get("team_a")})
+    team_b = _team({"id": data["team_b_id"], "name": data.get("team_b")})
+    tournament = " · ".join(
+        part for part in (str(data.get("tournament_name") or "").strip(), str(data.get("tournament_round_name") or "").strip()) if part
+    )
+    match = ChMatch(
+        cricheroes_match_id=match_id,
+        team_a=team_a,
+        team_b=team_b,
+        status=str(data.get("status") or "upcoming"),
+        start_time=_parse_time(data.get("match_start_time")),
+        tournament_name=tournament or None,
+        result=None,
+        has_scorecard=False,
+    )
+    team_ids = {team_a.cricheroes_team_id, team_b.cricheroes_team_id}
+    seen: set[int] = set()
+    for key in ("team_a_squad", "team_b_squad"):
+        squad = _find_json(payload, key, "[")
+        for raw in squad if isinstance(squad, list) else []:
+            # The squad lists are whole club rosters; only players marked for this match's XI are taken.
+            if not isinstance(raw, dict) or not raw.get("is_playing_squad"):
+                continue
+            pid, team_id = _int(raw.get("player_id")), _int(raw.get("team_id"))
+            if pid and team_id in team_ids and pid not in seen:
+                seen.add(pid)
+                match.players.append(
+                    ChPlayer(
+                        cricheroes_player_id=pid,
+                        name=clean_name(str(raw.get("player_name") or raw.get("name") or "")),
+                        team_id=team_id,
+                        is_keeper=bool(raw.get("isWicketKeeper")),
+                    )
+                )
+    return match
+
+
+def _payload(html: str, match_id: int) -> str:
+    if re.search(r"<title>\s*CricHeroes:\s*(404|410)", html):
+        raise CricHeroesError(f"CricHeroes match {match_id} was not found, or it is private")
+    return "".join(json.loads(f'"{chunk}"') for chunk in _RSC_CHUNK.findall(html))
 
 
 def _find_json(payload: str, key: str, opener: str):

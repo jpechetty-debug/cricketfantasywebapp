@@ -1,11 +1,13 @@
 import { ArrowRight, Medal, Shield, Swords, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import FeaturedPoster from '../components/FeaturedPoster';
 import MatchCard from '../components/MatchCard';
 import { CardSkeleton, RowSkeleton } from '../components/Skeleton';
 import { Avatar, EmptyState, RankBadge, SectionTitle } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { findFeaturedMatch } from '../lib/featured';
 import { formatPoints, isMatchEditable } from '../lib/format';
 import { apiError, leaderboardApi, matchApi, teamApi } from '../services/api';
 import type { FantasyTeam, LeaderboardEntry, Match } from '../types';
@@ -54,6 +56,13 @@ export default function DashboardPage() {
   const bestScore = teams.reduce((best, t) => Math.max(best, t.total_points), 0);
   const myRow = board.find((r) => r.user_id === auth?.userId);
   const firstName = auth?.name?.split(' ')[0] ?? '';
+  const featured = findFeaturedMatch(matches);
+  const featuredLink = featured
+    ? {
+        to: `/match/${featured.id}`,
+        cta: !isMatchEditable(featured) ? 'View match' : teamByMatch.has(featured.id) ? 'Edit your squad' : 'Pick your 7',
+      }
+    : { to: '/matches', cta: 'See matches' };
 
   return (
     <div className="space-y-10">
@@ -87,6 +96,8 @@ export default function DashboardPage() {
           </dl>
         </div>
       </section>
+
+      {!loading && <FeaturedPoster to={featuredLink.to} cta={featuredLink.cta} />}
 
       {/* Next match */}
       <section>

@@ -227,3 +227,61 @@ def test_upcoming_match_without_scorecard(client, admin_headers, fake_page):
     assert r.status_code == 200, r.text
     match = client.get(f"/api/matches/{r.json()['match_id']}", headers=admin_headers).json()
     assert (match["match_name"], match["status"]) == ("Final", "open")
+
+
+def _rsc(body: dict) -> str:
+    return f"<html><body><script>self.__next_f.push([1,{json.dumps('2:' + json.dumps(body))}])</script></body></html>"
+
+
+def upcoming_page(playing=()) -> str:
+    def member(pid, name, team_id, keeper=0):
+        return {
+            "player_id": pid,
+            "player_name": name,
+            "team_id": team_id,
+            "isWicketKeeper": keeper,
+            "is_playing_squad": int(pid in playing),
+        }
+
+    return _rsc(
+        {
+            "matchInfo": {
+                "status": True,
+                "data": {
+                    "match_id": 900,
+                    "match_start_time": "2026-10-10T12:30:00.000Z",
+                    "team_a_id": 10,
+                    "team_a": "Sharks",
+                    "team_b_id": 20,
+                    "team_b": "Amigos 11",
+                    "status": "upcoming",
+                    "tournament_name": "Celebration Cup ",
+                    "tournament_round_name": "Final",
+                },
+            },
+            # Rosters are listed under the "wrong" keys on purpose: team ids decide the side.
+            "team_a_squad": [member(201, "Pran", 20), member(202, "Arun (wk)", 20, keeper=1)],
+            "team_b_squad": [member(101, "Bobby", 10), member(202, "Arun", 10)],
+        }
+    )
+
+
+def test_upcoming_match_falls_back_to_the_upcoming_tab(monkeypatch):
+    pages = {cricheroes.PAGE_URL.format(match_id=900): _rsc({"tab": "scorecard"}),
+             cricheroes.UPCOMING_URL.format(match_id=900): upcoming_page()}
+    monkeypatch.setattr(cricheroes, "_download", lambda url, match_id: pages[url])
+    match = cricheroes.fetch_match(900)
+    assert (match.team_a.name, match.team_b.name, match.status) == ("Sharks", "Amigos 11", "upcoming")
+    assert match.start_time.isoformat() == "2026-10-10T12:30:00"
+    assert match.tournament_name == "Celebration Cup · Final"
+    assert not match.has_scorecard
+    # Nobody is marked for the XI yet, so the club rosters are not imported.
+    assert match.players == []
+
+
+def test_upcoming_match_reads_announced_playing_xi():
+    match = cricheroes.parse_upcoming_page(upcoming_page(playing={201, 202, 101}), 900)
+    players = {p.cricheroes_player_id: p for p in match.players}
+    assert set(players) == {201, 202, 101}
+    assert players[201].team_id == 20 and players[101].team_id == 10
+    assert players[202].team_id == 20 and players[202].is_keeper and players[202].name == "Arun"
