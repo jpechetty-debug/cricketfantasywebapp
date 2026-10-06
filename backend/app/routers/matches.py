@@ -6,6 +6,7 @@ from app.deps import get_current_user, require_admin
 from app.models.match import Match
 from app.models.user import User
 from app.schemas.match import MatchCreate, MatchOut, MatchStatusUpdate
+from app.services.teams import canonical_team
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -27,8 +28,8 @@ def get_match(match_id: int, _: User = Depends(get_current_user), db: Session = 
 def create_match(payload: MatchCreate, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     match = Match(
         match_name=payload.match_name.strip(),
-        team_a=payload.team_a.strip(),
-        team_b=payload.team_b.strip(),
+        team_a=canonical_team(db, payload.team_a),
+        team_b=canonical_team(db, payload.team_b),
         match_date=payload.match_date,
         status="open",
     )

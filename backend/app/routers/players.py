@@ -12,6 +12,7 @@ from app.models.player import Player
 from app.models.player_points import PlayerPoints
 from app.models.user import User
 from app.schemas.player import PlayerCreate, PlayerOut, PlayerUpdate
+from app.services.teams import canonical_team
 
 router = APIRouter(prefix="/players", tags=["players"])
 
@@ -35,7 +36,7 @@ def list_players(
 def create_player(payload: PlayerCreate, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     player = Player(
         player_name=payload.player_name.strip(),
-        team_name=payload.team_name.strip(),
+        team_name=canonical_team(db, payload.team_name),
         role=payload.role.strip(),
         active=payload.active,
     )
@@ -59,6 +60,8 @@ def update_player(
     for key, value in data.items():
         if isinstance(value, str):
             value = value.strip()
+        if key == "team_name":
+            value = canonical_team(db, value)
         setattr(player, key, value)
     db.commit()
     db.refresh(player)

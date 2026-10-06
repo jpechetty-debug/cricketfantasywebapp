@@ -29,6 +29,7 @@ from app.services.cricheroes import ChMatch, CricHeroesError, normalize_name
 from app.services.cricheroes_pdf import parse_scorecard_pdf
 from app.services.fantasy_points import score_match, suggest_role, total
 from app.services.scoring import set_player_points
+from app.services.teams import canonical_team
 
 router = APIRouter(prefix="/cricheroes", tags=["cricheroes"])
 logger = logging.getLogger("bachpan.cricheroes")
@@ -83,11 +84,11 @@ def _target_match(db: Session, ch: ChMatch, match_id: int | None) -> Match | Non
     return match
 
 
-def _team_names(ch: ChMatch, match: Match | None) -> dict[int, str]:
+def _team_names(db: Session, ch: ChMatch, match: Match | None) -> dict[int, str]:
     """CricHeroes team id -> app team name. Existing matches are paired by name, otherwise in order."""
     a, b = ch.team_a, ch.team_b
     if match is None:
-        return {a.cricheroes_team_id: a.name[:120], b.cricheroes_team_id: b.name[:120]}
+        return {a.cricheroes_team_id: canonical_team(db, a.name[:120]), b.cricheroes_team_id: canonical_team(db, b.name[:120])}
     swapped = normalize_name(a.name) == normalize_name(match.team_b) or normalize_name(b.name) == normalize_name(match.team_a)
     if swapped:
         return {a.cricheroes_team_id: match.team_b, b.cricheroes_team_id: match.team_a}
@@ -135,7 +136,7 @@ def _same_kind(linked_id: int | None, source_id: int) -> bool:
 
 
 def _build_preview(db: Session, ch: ChMatch, match: Match | None) -> CricHeroesPreview:
-    team_names = _team_names(ch, match)
+    team_names = _team_names(db, ch, match)
     suggestions = _suggest_players(db, ch, team_names)
     lines, warnings = score_match(ch)
     if not ch.players:
@@ -216,8 +217,8 @@ def _import(
     if match is None:
         match = Match(
             match_name=(match_name or f"{ch.team_a.name} vs {ch.team_b.name}").strip()[:200],
-            team_a=ch.team_a.name[:120],
-            team_b=ch.team_b.name[:120],
+            team_a=canonical_team(db, ch.team_a.name[:120]),
+            team_b=canonical_team(db, ch.team_b.name[:120]),
             match_date=ch.start_time or utcnow(),
             status=STATUS_MAP.get(ch.status, "open"),
         )
@@ -226,7 +227,7 @@ def _import(
     if not db.query(CricHeroesMatchLink).filter(CricHeroesMatchLink.match_id == match.id).first():
         db.add(CricHeroesMatchLink(match_id=match.id, cricheroes_match_id=ch.cricheroes_match_id))
 
-    team_names = _team_names(ch, match)
+    team_names = _team_names(db, ch, match)
     ch_players = {p.cricheroes_player_id: p for p in ch.players}
     lines, warnings = score_match(ch)
     unknown = [entry.cricheroes_player_id for entry in entries if entry.cricheroes_player_id not in ch_players]

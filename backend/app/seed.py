@@ -8,6 +8,7 @@ from app.models.match import Match
 from app.models.player import Player
 from app.models.user import User
 from app.services.auth import hash_password, verify_password
+from app.services.teams import unify_team_names
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ def seed_database(db: Session) -> None:
     ensure_admin(db)
     if settings.seed_demo_data:
         seed_demo_data(db)
+    db.flush()
+    unify_team_names(db)
     db.commit()
 
 
