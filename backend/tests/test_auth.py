@@ -25,6 +25,12 @@ def test_invalid_mobile_rejected(client):
     assert r.status_code == 422
 
 
+def test_register_requires_exactly_10_digits(client):
+    for mobile in ["912345678", "91234567890", "+919123456789"]:
+        r = client.post("/api/auth/register", json={"name": "Bad", "mobile": mobile, "password": "secret-pass"})
+        assert r.status_code == 422, mobile
+
+
 def test_wrong_password(client):
     r = client.post("/api/auth/login", json={"mobile": "9999999999", "password": "nope"})
     assert r.status_code == 401

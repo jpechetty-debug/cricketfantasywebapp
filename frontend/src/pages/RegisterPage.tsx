@@ -61,10 +61,11 @@ export default function RegisterPage() {
           inputMode="numeric"
           autoComplete="tel"
           placeholder="10-digit number"
-          pattern="\+?[0-9]{10,14}"
-          title="10 to 14 digits"
+          pattern="[0-9]{10}"
+          title="Exactly 10 digits"
+          maxLength={10}
           value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
+          onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
           required
         />
         <PasswordField

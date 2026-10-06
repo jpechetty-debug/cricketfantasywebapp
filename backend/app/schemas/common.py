@@ -21,4 +21,7 @@ UtcInput = Annotated[datetime, AfterValidator(to_naive_utc)]
 # Stored naive-UTC datetimes are emitted with an explicit offset so browsers don't read them as local time.
 UtcOutput = Annotated[datetime, PlainSerializer(as_utc_iso, return_type=str)]
 
+# Login still accepts the older 10-14 digit format so accounts created before the 10-digit rule can sign in.
 Mobile = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^\+?[0-9]{10,14}$")]
+# New sign-ups must use a plain 10-digit mobile number.
+NewMobile = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[0-9]{10}$")]
