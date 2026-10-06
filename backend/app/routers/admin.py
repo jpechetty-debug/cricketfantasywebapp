@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -22,6 +23,14 @@ class Winner(BaseModel):
     name: str
     mobile: str | None
     points: float
+
+
+class Member(BaseModel):
+    id: int
+    name: str
+    mobile: str
+    created_at: UtcOutput
+    squads: int
 
 
 class MatchWinners(BaseModel):
@@ -67,3 +76,25 @@ def winners(_: User = Depends(require_admin), db: Session = Depends(get_db)):
             )
         )
     return results
+
+
+@router.get("/users", response_model=list[Member])
+def list_users(_: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Everyone who signed up to play (admins excluded), newest first."""
+    squads = dict(db.query(FantasyTeam.user_id, func.count(FantasyTeam.id)).group_by(FantasyTeam.user_id))
+    users = db.query(User).filter(User.role == "user").order_by(User.created_at.desc(), User.id.desc()).all()
+    return [Member(id=u.id, name=u.name, mobile=u.mobile, created_at=u.created_at, squads=squads.get(u.id, 0)) for u in users]
+
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Remove a member and their squads; they drop out of every leaderboard."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin accounts can't be deleted here")
+    removed = db.query(FantasyTeam).filter(FantasyTeam.user_id == user.id).delete(synchronize_session=False)
+    db.delete(user)
+    db.commit()
+    return {"deleted": user_id, "squads_removed": removed}

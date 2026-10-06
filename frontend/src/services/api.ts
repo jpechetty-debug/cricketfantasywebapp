@@ -9,6 +9,7 @@ import type {
   CricHeroesPreview,
   FantasyTeam,
   LeaderboardEntry,
+  Member,
   Match,
   MatchStatus,
   MatchWinners,
@@ -114,6 +115,8 @@ export const leaderboardApi = {
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
   winners: () => api.get<MatchWinners[]>('/admin/winners').then((r) => r.data),
+  users: () => api.get<Member[]>('/admin/users').then((r) => r.data),
+  deleteUser: (id: number) => api.delete(`/admin/users/${id}`).then((r) => r.data),
 };
 
 // Fetching from CricHeroes can be slow, so these calls get a longer timeout.

@@ -55,6 +55,14 @@ export interface LeaderboardEntry {
   team_id: number;
 }
 
+export interface Member {
+  id: number;
+  name: string;
+  mobile: string;
+  created_at: string;
+  squads: number;
+}
+
 export interface AdminStats {
   total_users: number;
   total_matches: number;

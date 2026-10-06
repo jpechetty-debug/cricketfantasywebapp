@@ -19,7 +19,8 @@ services:
       # Admin account created on first start; Render asks for these values when the Blueprint is applied.
       - key: ADMIN_MOBILE
         value: "9876543210"
+      # Set in the Render dashboard only; never commit it (this repo is public).
       - key: ADMIN_PASSWORD
-        value: "Cloud@953396"
+        sync: false
       - key: SEED_DEMO_DATA
         value: "false"

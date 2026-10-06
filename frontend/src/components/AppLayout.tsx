@@ -8,6 +8,7 @@ import {
   Swords,
   Trophy,
   User,
+  UserCog,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ const adminLinks: NavItem[] = [
   { to: '/admin/players', label: 'Players', icon: Users },
   { to: '/admin/scoring', label: 'Scoring', icon: PenLine },
   { to: '/admin/cricheroes', label: 'Import', icon: CloudDownload },
+  { to: '/admin/users', label: 'Members', icon: UserCog },
 ];
 
 export default function AppLayout() {
