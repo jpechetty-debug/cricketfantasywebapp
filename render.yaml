@@ -18,8 +18,8 @@ services:
         sync: false
       # Admin account created on first start; Render asks for these values when the Blueprint is applied.
       - key: ADMIN_MOBILE
-        sync: false
+        value: "9876543210"
       - key: ADMIN_PASSWORD
-        sync: false
+        value: "Cloud@953396"
       - key: SEED_DEMO_DATA
         value: "false"
