@@ -12,10 +12,15 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (password !== confirm) {
+      notify('Passwords do not match', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const data = await authApi.register({ name: name.trim(), mobile: mobile.trim(), password });
@@ -75,6 +80,15 @@ export default function RegisterPage() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <PasswordField
+          label="Confirm password"
+          autoComplete="new-password"
+          hint={confirm && confirm !== password ? 'Passwords do not match.' : undefined}
+          aria-invalid={Boolean(confirm) && confirm !== password}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
           required
         />
         <button className="btn-primary w-full !py-3.5 text-base" disabled={loading}>
