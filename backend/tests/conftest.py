@@ -44,3 +44,15 @@ def user_headers(client):
     r = client.post("/api/auth/register", json={"name": "Ravi", "mobile": "9876543210", "password": "secret-pass"})
     assert r.status_code == 200, r.text
     return auth_header(r.json()["access_token"])
+
+
+def alternate_teams(players: list[dict]) -> list[dict]:
+    """Interleave the two sides (A, B, A, B, ...) so any 7 in a row stay within the 4-per-team limit."""
+    by_team: dict[str, list[dict]] = {}
+    for p in players:
+        by_team.setdefault(p["team_name"], []).append(p)
+    sides = list(by_team.values())
+    out = []
+    for i in range(max(len(s) for s in sides)):
+        out.extend(s[i] for s in sides if i < len(s))
+    return out

@@ -1,4 +1,4 @@
-from tests.conftest import auth_header
+from tests.conftest import alternate_teams, auth_header
 
 
 def _register(client, name, mobile):
@@ -9,7 +9,7 @@ def _register(client, name, mobile):
 
 def test_admin_sees_top_three_with_mobiles_once_match_is_closed(client, admin_headers):
     match_id = client.get("/api/matches", headers=admin_headers).json()[0]["id"]
-    players = client.get("/api/players", params={"match_id": match_id}, headers=admin_headers).json()
+    players = alternate_teams(client.get("/api/players", params={"match_id": match_id}, headers=admin_headers).json())
     ids = [p["id"] for p in players]
 
     # Four squads: captains differ so the scores differ; Dev and Esha tie for second.

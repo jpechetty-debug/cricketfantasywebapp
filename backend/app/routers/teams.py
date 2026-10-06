@@ -15,6 +15,9 @@ from app.services.scoring import calculate_team_points, player_score_map
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
+SQUAD_SIZE = 7
+MAX_PER_TEAM = 4
+
 
 def serialize_team(team: FantasyTeam, user_name: str | None = None, match_name: str | None = None) -> TeamOut:
     return TeamOut(
@@ -50,6 +53,9 @@ def validate_team_payload(db: Session, match: Match, payload: TeamCreate) -> Non
     allowed = {match.team_a, match.team_b}
     if any(p.team_name not in allowed for p in players):
         raise HTTPException(status_code=400, detail="Players must belong to the match teams")
+    for team in allowed:
+        if sum(p.team_name == team for p in players) > MAX_PER_TEAM:
+            raise HTTPException(status_code=400, detail=f"Pick at most {MAX_PER_TEAM} players from {team}")
 
 
 @router.post("", response_model=TeamOut)

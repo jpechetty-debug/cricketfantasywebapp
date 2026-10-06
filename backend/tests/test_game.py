@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.scoring import calculate_team_points
+from tests.conftest import alternate_teams
 
 
 def test_captain_and_vice_multipliers():
@@ -13,7 +14,7 @@ def test_captain_and_vice_multipliers():
 
 
 def _players(client, headers, match_id):
-    return client.get("/api/players", params={"match_id": match_id}, headers=headers).json()
+    return alternate_teams(client.get("/api/players", params={"match_id": match_id}, headers=headers).json())
 
 
 def _team_payload(match_id, players):
@@ -105,3 +106,13 @@ def test_cannot_delete_player_in_use(client, user_headers, admin_headers, match_
 
 def test_unknown_api_path_is_404(client):
     assert client.get("/api/nope").status_code == 404
+
+
+def test_at_most_four_players_from_one_team(client, user_headers, match_id):
+    players = _players(client, user_headers, match_id)
+    team_a = [p for p in players if p["team_name"] == players[0]["team_name"]]
+    team_b = [p for p in players if p["team_name"] != players[0]["team_name"]]
+    r = client.post("/api/teams", json=_team_payload(match_id, team_a[:5] + team_b[:2]), headers=user_headers)
+    assert r.status_code == 400 and "at most 4" in r.json()["detail"]
+    r = client.post("/api/teams", json=_team_payload(match_id, team_a[:4] + team_b[:3]), headers=user_headers)
+    assert r.status_code == 200, r.text

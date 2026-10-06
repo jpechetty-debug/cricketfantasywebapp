@@ -10,7 +10,7 @@ import { EmptyState, TeamCrest } from '../components/ui';
 import { useNow } from '../hooks/useNow';
 import { useToast } from '../hooks/useToast';
 import { byPlayerName, formatCountdown, formatMatchDate, formatPoints, isMatchEditable } from '../lib/format';
-import { SQUAD_SIZE, teamTotal } from '../lib/squad';
+import { MAX_PER_TEAM, SQUAD_SIZE, teamTotal } from '../lib/squad';
 import { apiError, matchApi, playerApi, pointsApi, teamApi } from '../services/api';
 import type { Match, Player } from '../types';
 
@@ -76,7 +76,13 @@ export default function MatchPage() {
     saved.vice !== vice ||
     saved.selected.length !== selected.length ||
     saved.selected.some((pid) => !selected.includes(pid));
-  const complete = selected.length === SQUAD_SIZE && captain !== null && vice !== null;
+  const perTeam = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of selectedPlayers) counts[p.team_name] = (counts[p.team_name] ?? 0) + 1;
+    return counts;
+  }, [selectedPlayers]);
+  const balanced = Object.values(perTeam).every((n) => n <= MAX_PER_TEAM);
+  const complete = selected.length === SQUAD_SIZE && captain !== null && vice !== null && balanced;
 
   const visiblePlayers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -101,9 +107,14 @@ export default function MatchPage() {
         notify(`Your squad is full. Remove a player to add another.`, 'info');
         return;
       }
+      const team = players.find((p) => p.id === playerId)?.team_name;
+      if (team && (perTeam[team] ?? 0) >= MAX_PER_TEAM) {
+        notify(`You can pick at most ${MAX_PER_TEAM} players from ${team}.`, 'info');
+        return;
+      }
       setSelected([...selected, playerId]);
     },
-    [editable, selected, captain, vice, notify],
+    [editable, selected, captain, vice, notify, players, perTeam],
   );
 
   function pickCaptain(pid: number) {
@@ -297,7 +308,10 @@ export default function MatchPage() {
                   key={player.id}
                   player={player}
                   selected={selected.includes(player.id)}
-                  disabled={!selected.includes(player.id) && selected.length >= SQUAD_SIZE}
+                  disabled={
+                    !selected.includes(player.id) &&
+                    (selected.length >= SQUAD_SIZE || (perTeam[player.team_name] ?? 0) >= MAX_PER_TEAM)
+                  }
                   readOnly={!editable}
                   points={points ? (points[player.id] ?? 0) : undefined}
                   badge={player.id === captain ? 'C' : player.id === vice ? 'VC' : null}

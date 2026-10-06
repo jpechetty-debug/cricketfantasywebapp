@@ -5,6 +5,7 @@ import pytest
 from app.services import cricheroes
 from app.services.cricheroes import CricHeroesError, parse_match_id, parse_match_page
 from app.services.fantasy_points import parse_dismissal, score_match, total
+from tests.conftest import alternate_teams
 
 URL = "https://cricheroes.com/scorecard/555/some-cup/team-a-vs-team-b/scorecard"
 
@@ -166,7 +167,7 @@ def test_preview_matches_existing_players_by_name(client, admin_headers, fake_pa
 
 def test_import_into_existing_match_saves_points_and_links(client, admin_headers, user_headers, fake_page):
     match_id = client.get("/api/matches", headers=user_headers).json()[0]["id"]
-    players = client.get("/api/players", params={"match_id": match_id}, headers=user_headers).json()
+    players = alternate_teams(client.get("/api/players", params={"match_id": match_id}, headers=user_headers).json())
     ids = [p["id"] for p in players[:7]]
     team = {"match_id": match_id, "selected_players": ids, "captain_id": ids[0], "vice_captain_id": ids[1]}
     assert client.post("/api/teams", json=team, headers=user_headers).status_code == 200

@@ -4,7 +4,7 @@ import { Logo, TeamCrest } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 
 const STEPS = [
-  { icon: ListChecks, title: 'Pick 7 players', body: 'Choose from both sides of the fixture. Any mix of batters, bowlers and all-rounders.' },
+  { icon: ListChecks, title: 'Pick 7 players', body: 'Choose from both sides of the fixture, with at most 4 from one team. Any mix of batters, bowlers and all-rounders.' },
   { icon: Crown, title: 'Back your captain', body: 'Captain earns 2× points, vice-captain 1.5×. That call usually decides the league.' },
   { icon: PenLine, title: 'Organiser scores it', body: 'After the game, the admin enters each player’s points. No feeds, no fuss.' },
   { icon: Trophy, title: 'Climb the table', body: 'The leaderboard updates instantly. Bragging rights until the next Sunday.' },

@@ -1,6 +1,8 @@
 import type { Player } from '../types';
 
 export const SQUAD_SIZE = 7;
+// Keeps squads balanced across the two sides; the server enforces the same limit.
+export const MAX_PER_TEAM = 4;
 
 const ROLE_ORDER: Record<string, number> = { WK: 0, BAT: 1, AR: 2, BOWL: 3 };
 
