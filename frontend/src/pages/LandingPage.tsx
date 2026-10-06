@@ -50,7 +50,7 @@ export default function LandingPage() {
               <br />
               Back your <span className="text-lime">captain.</span>
               <br />
-              Own the gully.
+              Own the fantasy.
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-300">
               Run a fantasy league for your Sunday matches. Friends pick squads, the organiser enters scores, and the leaderboard does the trash talk.
