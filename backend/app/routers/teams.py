@@ -39,8 +39,8 @@ def is_match_open(match: Match) -> bool:
 
 
 def validate_team_payload(db: Session, match: Match, payload: TeamCreate) -> None:
-    if len(set(payload.selected_players)) != 7:
-        raise HTTPException(status_code=400, detail="Select exactly 7 unique players")
+    if len(set(payload.selected_players)) != SQUAD_SIZE:
+        raise HTTPException(status_code=400, detail=f"Select exactly {SQUAD_SIZE} unique players")
     if payload.captain_id not in payload.selected_players:
         raise HTTPException(status_code=400, detail="Captain must be one of the selected players")
     if payload.vice_captain_id not in payload.selected_players:
@@ -48,7 +48,7 @@ def validate_team_payload(db: Session, match: Match, payload: TeamCreate) -> Non
     if payload.captain_id == payload.vice_captain_id:
         raise HTTPException(status_code=400, detail="Captain and vice captain must be different")
     players = db.query(Player).filter(Player.id.in_(payload.selected_players), Player.active.is_(True)).all()
-    if len(players) != 7:
+    if len(players) != SQUAD_SIZE:
         raise HTTPException(status_code=400, detail="All selected players must be active and valid")
     allowed = {match.team_a, match.team_b}
     if any(p.team_name not in allowed for p in players):

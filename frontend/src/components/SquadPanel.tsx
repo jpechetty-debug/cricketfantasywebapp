@@ -34,7 +34,10 @@ export default function SquadPanel({ players, captain, vice, readOnly, points, t
 
   const checks = [
     { done: players.length === SQUAD_SIZE, label: `${SQUAD_SIZE} players picked` },
-    { done: fromA <= MAX_PER_TEAM && fromB <= MAX_PER_TEAM, label: `Max ${MAX_PER_TEAM} from one team` },
+    {
+      done: players.length === SQUAD_SIZE && fromA <= MAX_PER_TEAM && fromB <= MAX_PER_TEAM,
+      label: `Max ${MAX_PER_TEAM} from one team`,
+    },
     { done: captain !== null, label: 'Captain chosen (2×)' },
     { done: vice !== null, label: 'Vice-captain chosen (1.5×)' },
   ];
