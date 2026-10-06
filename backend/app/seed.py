@@ -7,7 +7,7 @@ from app.config import settings
 from app.models.match import Match
 from app.models.player import Player
 from app.models.user import User
-from app.services.auth import hash_password
+from app.services.auth import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,15 @@ def seed_database(db: Session) -> None:
 
 
 def ensure_admin(db: Session) -> None:
-    if db.query(User).filter(User.role == "admin").first():
+    # The database (e.g. Neon) outlives deploys, so keep the configured admin in sync with the env on every start.
+    configured = db.query(User).filter(User.mobile == settings.admin_mobile).first()
+    if configured and settings.admin_password is not None:
+        if configured.role != "admin" or not verify_password(settings.admin_password, configured.password_hash):
+            configured.role = "admin"
+            configured.password_hash = hash_password(settings.admin_password)
+            logger.info("Updated admin %s from ADMIN_PASSWORD", settings.admin_mobile)
+        return
+    if configured or (settings.admin_password is None and db.query(User).filter(User.role == "admin").first()):
         return
     password = settings.admin_password
     if password is None:
