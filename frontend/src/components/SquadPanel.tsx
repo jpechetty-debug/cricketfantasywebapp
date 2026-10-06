@@ -2,6 +2,7 @@ import { Check, Circle, X } from 'lucide-react';
 import { formatPoints, initials } from '../lib/format';
 import { MAX_PER_TEAM, SQUAD_SIZE, sortSquad } from '../lib/squad';
 import type { Player } from '../types';
+import { TeamCrest } from './ui';
 
 // Fielding positions (percent of the field box) for the 7 squad slots.
 const SLOTS = [
@@ -81,6 +82,9 @@ export default function SquadPanel({ players, captain, vice, readOnly, points, t
                   <span className="relative">
                     <span className="flex h-11 w-11 animate-pop items-center justify-center rounded-full bg-white font-display text-sm font-extrabold text-ink shadow-md">
                       {initials(p.player_name)}
+                    </span>
+                    <span className="absolute -bottom-1.5 -left-2.5 flex rounded-md shadow ring-2 ring-white" title={p.team_name}>
+                      <TeamCrest name={p.team_name} size="xs" />
                     </span>
                     {(p.id === captain || p.id === vice) && (
                       <span

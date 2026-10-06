@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { initials, teamColor } from '../lib/format';
+import { teamLogo } from '../lib/teamLogos';
 
 export function Logo({ className = 'h-9 w-9' }: { className?: string }) {
   return (
@@ -20,14 +21,28 @@ export function Logo({ className = 'h-9 w-9' }: { className?: string }) {
 }
 
 const SIZES = {
+  xs: 'h-6 w-6 text-[9px]',
   sm: 'h-8 w-8 text-[11px]',
   md: 'h-11 w-11 text-sm',
   lg: 'h-16 w-16 text-lg',
   xl: 'h-20 w-20 text-2xl',
 };
 
-/** Team crest: a coloured monogram derived from the team name. */
+/** Team crest: the team's logo when we have one, otherwise a coloured monogram derived from the team name. */
 export function TeamCrest({ name, size = 'md', ring = false }: { name: string; size?: keyof typeof SIZES; ring?: boolean }) {
+  const logo = teamLogo(name);
+  if (logo) {
+    return (
+      <span
+        className={`inline-flex shrink-0 overflow-hidden ${size === 'xs' ? 'rounded-md' : 'rounded-xl'} shadow-sm ring-1 ring-inset ring-slate-900/10 ${SIZES[size]} ${ring ? 'ring-4 ring-white/10' : ''}`}
+        style={{ backgroundColor: logo.bg }}
+        title={name}
+        aria-hidden="true"
+      >
+        <img src={logo.src} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
+      </span>
+    );
+  }
   const { bg, fg } = teamColor(name);
   return (
     <span
