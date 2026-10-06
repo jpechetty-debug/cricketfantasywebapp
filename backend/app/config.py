@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     environment: str = "development"
     secret_key: str = DEV_SECRET
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24 * 7
+    # Logins last a day; set ACCESS_TOKEN_EXPIRE_MINUTES to change it.
+    access_token_expire_minutes: int = 60 * 24
     database_url: str = "sqlite:///./bachpan_cricket.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
