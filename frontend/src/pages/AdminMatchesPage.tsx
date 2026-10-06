@@ -1,5 +1,6 @@
-import { CalendarPlus, Swords } from 'lucide-react';
+import { CalendarPlus, Swords, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { ConfirmDialog } from '../components/Modal';
 import { RowSkeleton } from '../components/Skeleton';
 import StatusBadge from '../components/StatusBadge';
 import { EmptyState, PageHeader, TeamCrest } from '../components/ui';
@@ -24,6 +25,8 @@ export default function AdminMatchesPage() {
   const [teamA, setTeamA] = useState('');
   const [teamB, setTeamB] = useState('');
   const [matchDate, setMatchDate] = useState('');
+  const [toDelete, setToDelete] = useState<Match | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const refresh = useCallback(async () => setMatches(await matchApi.list()), []);
 
@@ -67,6 +70,21 @@ export default function AdminMatchesPage() {
       notify(apiError(err, 'Could not update match'), 'error');
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await matchApi.remove(toDelete.id);
+      await refresh();
+      notify(`${toDelete.match_name} deleted`, 'success');
+    } catch (err) {
+      notify(apiError(err, 'Could not delete match'), 'error');
+    } finally {
+      setDeleting(false);
+      setToDelete(null);
     }
   }
 
@@ -136,7 +154,18 @@ export default function AdminMatchesPage() {
                         <p className="text-xs font-medium text-slate-400">{formatMatchDate(match.match_date)}</p>
                       </div>
                     </div>
-                    <StatusBadge status={match.status} />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <StatusBadge status={match.status} />
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-ball-soft hover:text-ball"
+                        onClick={() => setToDelete(match)}
+                        aria-label={`Delete ${match.match_name}`}
+                        title="Delete match"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label={`Status for ${match.match_name}`}>
                     {STATUSES.map((s) => (
@@ -161,6 +190,22 @@ export default function AdminMatchesPage() {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Delete match?"
+        body={
+          <>
+            <strong className="text-ink">{toDelete?.match_name}</strong> ({toDelete?.team_a} vs {toDelete?.team_b}) will be removed permanently, along with
+            every squad picked for it, its points and its leaderboard. Players stay in the pool.
+          </>
+        }
+        confirmLabel="Delete match"
+        danger
+        busy={deleting}
+        onConfirm={() => void confirmDelete()}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }

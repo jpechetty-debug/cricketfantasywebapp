@@ -13,7 +13,7 @@ import type { AdminStats, Match, MatchWinners } from '../types';
 const ACTIONS = [
   { to: '/admin/matches', icon: Swords, title: 'Schedule a match', body: 'Create fixtures and open them for squads.' },
   { to: '/admin/players', icon: Users, title: 'Manage players', body: 'Add, edit or retire players from the pool.' },
-  { to: '/admin/scoring', icon: PenLine, title: 'Enter points', body: 'Score a match and update the leaderboard.' },
+  { to: '/admin/scoring', icon: PenLine, title: 'View points', body: 'See the points imported for each player.' },
   { to: '/admin/cricheroes', icon: CloudDownload, title: 'Import from CricHeroes', body: 'Pull fixtures, XIs and points from a scorecard.' },
 ];
 
@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
           <EmptyState
             icon={<Trophy className="h-6 w-6" />}
             title="No results yet"
-            body="After a match, import or enter the points, then set the match to closed. Its top 3 squads appear here."
+            body="After a match, import the CricHeroes scorecard, then set the match to completed. Its top 3 squads appear here."
           />
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">

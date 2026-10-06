@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
+from app.models.cricheroes import CricHeroesMatchLink
+from app.models.fantasy_team import FantasyTeam
 from app.models.match import Match
+from app.models.player_points import PlayerPoints
 from app.models.user import User
 from app.schemas.match import MatchCreate, MatchOut, MatchStatusUpdate
 from app.services.teams import canonical_team
@@ -53,3 +56,17 @@ def update_match_status(
     db.commit()
     db.refresh(match)
     return match
+
+
+@router.delete("/{match_id}")
+def delete_match(match_id: int, _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Remove a match with its squads, points and CricHeroes link. Players stay in the pool."""
+    match = db.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    squads = db.query(FantasyTeam).filter(FantasyTeam.match_id == match_id).delete(synchronize_session=False)
+    db.query(PlayerPoints).filter(PlayerPoints.match_id == match_id).delete(synchronize_session=False)
+    db.query(CricHeroesMatchLink).filter(CricHeroesMatchLink.match_id == match_id).delete(synchronize_session=False)
+    db.delete(match)
+    db.commit()
+    return {"deleted": match_id, "squads_removed": squads}

@@ -1,4 +1,4 @@
-from tests.conftest import alternate_teams, auth_header
+from tests.conftest import alternate_teams, auth_header, give_points
 
 
 def _register(client, name, mobile):
@@ -26,8 +26,7 @@ def test_admin_sees_top_three_with_mobiles_once_match_is_closed(client, admin_he
         assert client.post("/api/teams", json=body, headers=headers).status_code == 200
 
     points = {ids[0]: 50, ids[1]: 30}
-    entries = [{"player_id": pid, "points": points.get(pid, 1)} for pid in ids]
-    assert client.post("/api/points", json={"match_id": match_id, "entries": entries}, headers=admin_headers).status_code == 200
+    give_points(match_id, {pid: points.get(pid, 1) for pid in ids})
 
     # Results are only published for closed matches.
     assert client.get("/api/admin/winners", headers=admin_headers).json() == []

@@ -15,6 +15,7 @@ from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed import seed_database  # noqa: E402
 from app.services.rate_limit import auth_limiter  # noqa: E402
+from app.services.scoring import set_player_points  # noqa: E402
 
 
 @pytest.fixture()
@@ -58,3 +59,10 @@ def alternate_teams(players: list[dict]) -> list[dict]:
     for i in range(max(len(s) for s in sides)):
         out.extend(s[i] for s in sides if i < len(s))
     return out
+
+
+def give_points(match_id: int, points: dict[int, float]) -> None:
+    """Store player points the way a CricHeroes import does; there is no manual points endpoint."""
+    with SessionLocal() as db:
+        set_player_points(db, match_id, points)
+        db.commit()

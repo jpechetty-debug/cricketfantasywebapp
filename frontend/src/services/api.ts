@@ -83,6 +83,7 @@ export const matchApi = {
     api.post<Match>('/matches', payload).then((r) => r.data),
   setStatus: (id: number, status: MatchStatus) =>
     api.patch<Match>(`/matches/${id}/status`, { status }).then((r) => r.data),
+  remove: (id: number) => api.delete(`/matches/${id}`).then((r) => r.data),
 };
 
 export const playerApi = {
@@ -101,11 +102,10 @@ export const teamApi = {
   forMatch: (matchId: number) => api.get<FantasyTeam | null>(`/teams/match/${matchId}`).then((r) => r.data),
 };
 
+// Points are read-only: they only come from a CricHeroes import.
 export const pointsApi = {
   get: (matchId: number) =>
     api.get<{ player_id: number; points: number }[]>(`/points/${matchId}`).then((r) => r.data),
-  save: (payload: { match_id: number; entries: { player_id: number; points: number }[] }) =>
-    api.post('/points', payload).then((r) => r.data),
 };
 
 export const leaderboardApi = {

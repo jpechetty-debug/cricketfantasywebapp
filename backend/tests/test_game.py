@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.scoring import calculate_team_points
-from tests.conftest import alternate_teams
+from tests.conftest import alternate_teams, give_points
 
 
 def test_captain_and_vice_multipliers():
@@ -78,9 +78,7 @@ def test_points_update_leaderboard(client, user_headers, admin_headers, match_id
     payload = _team_payload(match_id, _players(client, user_headers, match_id))
     client.post("/api/teams", json=payload, headers=user_headers)
 
-    entries = [{"player_id": pid, "points": 10} for pid in payload["selected_players"]]
-    r = client.post("/api/points", json={"match_id": match_id, "entries": entries}, headers=admin_headers)
-    assert r.status_code == 200
+    give_points(match_id, {pid: 10 for pid in payload["selected_players"]})
 
     board = client.get(f"/api/leaderboard/{match_id}", headers=user_headers).json()
     assert board[0]["points"] == 20 + 15 + 50
@@ -88,11 +86,26 @@ def test_points_update_leaderboard(client, user_headers, admin_headers, match_id
     assert client.get("/api/teams/me", headers=user_headers).json()[0]["total_points"] == 85
 
 
-def test_points_reject_players_outside_match(client, admin_headers, match_id):
-    r = client.post(
-        "/api/points", json={"match_id": match_id, "entries": [{"player_id": 99999, "points": 5}]}, headers=admin_headers
-    )
-    assert r.status_code == 400
+def test_nobody_can_enter_points_by_hand(client, admin_headers, match_id):
+    body = {"match_id": match_id, "entries": [{"player_id": 1, "points": 5}]}
+    assert client.post("/api/points", json=body, headers=admin_headers).status_code in (404, 405)
+    assert client.get(f"/api/points/{match_id}", headers=admin_headers).json() == []
+
+
+def test_admin_deletes_a_match_with_its_squads_and_points(client, user_headers, admin_headers, match_id):
+    payload = _team_payload(match_id, _players(client, user_headers, match_id))
+    assert client.post("/api/teams", json=payload, headers=user_headers).status_code == 200
+    give_points(match_id, {pid: 10 for pid in payload["selected_players"]})
+
+    assert client.delete(f"/api/matches/{match_id}", headers=user_headers).status_code == 403
+    r = client.delete(f"/api/matches/{match_id}", headers=admin_headers)
+    assert r.status_code == 200 and r.json()["squads_removed"] == 1
+    assert client.get(f"/api/matches/{match_id}", headers=admin_headers).status_code == 404
+    assert client.get("/api/teams/me", headers=user_headers).json() == []
+    assert client.get(f"/api/points/{match_id}", headers=admin_headers).json() == []
+    # Players are kept for other fixtures.
+    assert client.get("/api/players", headers=admin_headers).json()
+    assert client.delete(f"/api/matches/{match_id}", headers=admin_headers).status_code == 404
 
 
 def test_cannot_delete_player_in_use(client, user_headers, admin_headers, match_id):

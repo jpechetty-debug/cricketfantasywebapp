@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 const STEPS = [
   { icon: ListChecks, title: 'Pick 7 players', body: 'Choose from both sides of the fixture, with at most 4 from one team. Any mix of batters, bowlers and all-rounders.' },
   { icon: Crown, title: 'Back your captain', body: 'Captain earns 2× points, vice-captain 1.5×. That call usually decides the league.' },
-  { icon: PenLine, title: 'Organiser scores it', body: 'After the game, the admin enters each player’s points. No feeds, no fuss.' },
+  { icon: PenLine, title: 'Scored from the scorecard', body: 'After the game, points come straight from the official CricHeroes scorecard. Nobody can fiddle them.' },
   { icon: Trophy, title: 'Climb the table', body: 'The leaderboard updates instantly. Bragging rights until the next Sunday.' },
 ];
 
@@ -54,7 +54,7 @@ export default function LandingPage() {
               Own the fantasy.
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-300">
-              Run a fantasy league for your Sunday matches. Friends pick squads, the organiser enters scores, and the leaderboard does the trash talk.
+              Run a fantasy league for your Sunday matches. Friends pick squads, points come from the CricHeroes scorecard, and the leaderboard does the trash talk.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/register" className="btn-lime px-7 py-3.5 text-base">
