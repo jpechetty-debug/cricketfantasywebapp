@@ -8,7 +8,7 @@ from app.models.player import Player
 from app.models.player_points import PlayerPoints
 from app.models.user import User
 from app.schemas.points import PointsPayload
-from app.services.scoring import recalculate_match_teams
+from app.services.scoring import set_player_points
 
 router = APIRouter(prefix="/points", tags=["points"])
 
@@ -35,17 +35,6 @@ def save_points(payload: PointsPayload, _: User = Depends(require_admin), db: Se
     }
     if valid_ids != player_ids:
         raise HTTPException(status_code=400, detail="All players must belong to the match teams")
-    for entry in payload.entries:
-        row = (
-            db.query(PlayerPoints)
-            .filter(PlayerPoints.match_id == payload.match_id, PlayerPoints.player_id == entry.player_id)
-            .first()
-        )
-        if row:
-            row.points = entry.points
-        else:
-            db.add(PlayerPoints(match_id=payload.match_id, player_id=entry.player_id, points=entry.points))
-    db.flush()
-    recalculate_match_teams(db, payload.match_id)
+    set_player_points(db, payload.match_id, {entry.player_id: entry.points for entry in payload.entries})
     db.commit()
     return {"ok": True}

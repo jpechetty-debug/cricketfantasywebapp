@@ -67,3 +67,50 @@ export interface AuthState {
   name: string;
   userId: number;
 }
+
+export interface CricHeroesTeam {
+  cricheroes_team_id: number;
+  name: string;
+  app_team_name: string;
+}
+
+export interface CricHeroesPlayer {
+  cricheroes_player_id: number;
+  name: string;
+  side: 'a' | 'b';
+  suggested_role: string;
+  points: number | null;
+  breakdown: { label: string; points: number }[];
+  player_id: number | null;
+  match_reason: 'linked' | 'name' | 'none';
+}
+
+export interface CricHeroesPreview {
+  cricheroes_match_id: number;
+  tournament_name: string | null;
+  start_time: string | null;
+  status: 'upcoming' | 'live' | 'past' | string;
+  result: string | null;
+  has_scorecard: boolean;
+  match_id: number | null;
+  team_a: CricHeroesTeam;
+  team_b: CricHeroesTeam;
+  players: CricHeroesPlayer[];
+  warnings: string[];
+}
+
+export interface CricHeroesImportPlayer {
+  cricheroes_player_id: number;
+  player_id: number | null;
+  role: string;
+  skip: boolean;
+}
+
+export interface CricHeroesImportResult {
+  match_id: number;
+  created_match: boolean;
+  players_created: number;
+  players_linked: number;
+  points_saved: number;
+  warnings: string[];
+}

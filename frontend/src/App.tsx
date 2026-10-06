@@ -21,6 +21,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const AdminMatchesPage = lazy(() => import('./pages/AdminMatchesPage'));
 const AdminPlayersPage = lazy(() => import('./pages/AdminPlayersPage'));
 const AdminScoringPage = lazy(() => import('./pages/AdminScoringPage'));
+const AdminCricHeroesPage = lazy(() => import('./pages/AdminCricHeroesPage'));
 
 function PageFallback() {
   return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" />;
@@ -63,6 +64,7 @@ export default function App() {
               <Route path="/admin/matches" element={<Suspense fallback={<PageFallback />}><AdminMatchesPage /></Suspense>} />
               <Route path="/admin/players" element={<Suspense fallback={<PageFallback />}><AdminPlayersPage /></Suspense>} />
               <Route path="/admin/scoring" element={<Suspense fallback={<PageFallback />}><AdminScoringPage /></Suspense>} />
+              <Route path="/admin/cricheroes" element={<Suspense fallback={<PageFallback />}><AdminCricHeroesPage /></Suspense>} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

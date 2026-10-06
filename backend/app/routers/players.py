@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
+from app.models.cricheroes import CricHeroesPlayerLink
 from app.models.fantasy_team import FantasyTeam
 from app.models.match import Match
 from app.models.player import Player
@@ -84,6 +85,7 @@ def delete_player(player_id: int, _: User = Depends(require_admin), db: Session 
             status_code=status.HTTP_409_CONFLICT,
             detail="Player is part of existing teams or scores. Mark them inactive instead",
         )
+    db.query(CricHeroesPlayerLink).filter(CricHeroesPlayerLink.player_id == player_id).delete()
     db.delete(player)
     db.commit()
     return {"ok": True}

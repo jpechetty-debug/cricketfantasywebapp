@@ -30,3 +30,20 @@ def recalculate_match_teams(db: Session, match_id: int) -> None:
     teams = db.query(FantasyTeam).filter(FantasyTeam.match_id == match_id).all()
     for team in teams:
         team.total_points = calculate_team_points(team, scores)
+
+
+def set_player_points(db: Session, match_id: int, points: dict[int, float]) -> None:
+    """Upsert points for the given players and refresh every squad's total; the caller commits."""
+    existing = {
+        row.player_id: row
+        for row in db.query(PlayerPoints).filter(
+            PlayerPoints.match_id == match_id, PlayerPoints.player_id.in_(points)
+        )
+    }
+    for player_id, value in points.items():
+        if player_id in existing:
+            existing[player_id].points = value
+        else:
+            db.add(PlayerPoints(match_id=match_id, player_id=player_id, points=value))
+    db.flush()
+    recalculate_match_teams(db, match_id)

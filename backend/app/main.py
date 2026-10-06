@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routers import admin, auth, leaderboard, matches, players, points, teams
+from app.routers import admin, auth, cricheroes, leaderboard, matches, players, points, teams
 from app.seed import seed_database
 
 import app.models  # noqa: F401  # register models
@@ -79,7 +79,7 @@ async def unhandled_exception(request: Request, exc: Exception):
 
 
 api = APIRouter(prefix=API_PREFIX)
-for module in (auth, matches, players, teams, points, leaderboard, admin):
+for module in (auth, matches, players, teams, points, leaderboard, admin, cricheroes):
     api.include_router(module.router)
 
 

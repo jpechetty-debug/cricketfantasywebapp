@@ -1,3 +1,11 @@
+databases:
+  - name: cricket-fantasy-db
+    plan: free
+    databaseName: cricket_fantasy
+    user: cricket_fantasy
+    # Only the web service (inside Render's private network) can connect.
+    ipAllowList: []
+
 services:
   - type: web
     name: cricket-fantasy
@@ -12,3 +20,15 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
+      # Persistent Postgres instead of the SQLite file, which is wiped on every restart/redeploy.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cricket-fantasy-db
+          property: connectionString
+      # Admin account created on first start; Render asks for these values when the Blueprint is applied.
+      - key: ADMIN_MOBILE
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO_DATA
+        value: "false"

@@ -3,6 +3,9 @@ import type { AxiosError } from 'axios';
 import type {
   AdminStats,
   AuthResponse,
+  CricHeroesImportPlayer,
+  CricHeroesImportResult,
+  CricHeroesPreview,
   FantasyTeam,
   LeaderboardEntry,
   Match,
@@ -108,6 +111,19 @@ export const leaderboardApi = {
 
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
+};
+
+// Fetching from CricHeroes can be slow, so these calls get a longer timeout.
+export const cricheroesApi = {
+  preview: (payload: { url: string; match_id?: number | null }) =>
+    api.post<CricHeroesPreview>('/cricheroes/preview', payload, { timeout: 45000 }).then((r) => r.data),
+  import: (payload: {
+    url: string;
+    match_id?: number | null;
+    match_name?: string | null;
+    players: CricHeroesImportPlayer[];
+    save_points: boolean;
+  }) => api.post<CricHeroesImportResult>('/cricheroes/import', payload, { timeout: 45000 }).then((r) => r.data),
 };
 
 export default api;

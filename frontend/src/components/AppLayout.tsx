@@ -1,5 +1,6 @@
 import {
   ClipboardList,
+  CloudDownload,
   LayoutDashboard,
   LogOut,
   PenLine,
@@ -34,6 +35,7 @@ const adminLinks: NavItem[] = [
   { to: '/admin/matches', label: 'Matches', icon: Swords },
   { to: '/admin/players', label: 'Players', icon: Users },
   { to: '/admin/scoring', label: 'Scoring', icon: PenLine },
+  { to: '/admin/cricheroes', label: 'Import', icon: CloudDownload },
 ];
 
 export default function AppLayout() {

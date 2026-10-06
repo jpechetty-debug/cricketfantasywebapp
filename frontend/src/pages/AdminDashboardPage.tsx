@@ -1,4 +1,4 @@
-import { ArrowRight, PenLine, Shield, Swords, Users } from 'lucide-react';
+import { ArrowRight, CloudDownload, PenLine, Shield, Swords, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CardSkeleton, RowSkeleton } from '../components/Skeleton';
@@ -14,6 +14,7 @@ const ACTIONS = [
   { to: '/admin/matches', icon: Swords, title: 'Schedule a match', body: 'Create fixtures and open them for squads.' },
   { to: '/admin/players', icon: Users, title: 'Manage players', body: 'Add, edit or retire players from the pool.' },
   { to: '/admin/scoring', icon: PenLine, title: 'Enter points', body: 'Score a match and update the leaderboard.' },
+  { to: '/admin/cricheroes', icon: CloudDownload, title: 'Import from CricHeroes', body: 'Pull fixtures, XIs and points from a scorecard.' },
 ];
 
 export default function AdminDashboardPage() {
@@ -52,7 +53,7 @@ export default function AdminDashboardPage() {
 
       <section>
         <SectionTitle title="Quick actions" />
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {ACTIONS.map(({ to, icon: Icon, title, body }) => (
             <Link key={to} to={to} className="card-interactive group flex items-start gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink text-lime">
