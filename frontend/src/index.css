@@ -43,7 +43,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-ink outline-none transition placeholder:text-slate-400 focus:border-pitch-500 focus:ring-4 focus:ring-pitch-500/15;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-ink outline-none sm:text-sm transition placeholder:text-slate-400 focus:border-pitch-500 focus:ring-4 focus:ring-pitch-500/15;
   }
   .label {
     @apply mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500;

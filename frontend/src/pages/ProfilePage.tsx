@@ -1,14 +1,14 @@
 import { CalendarDays, LogOut, Phone, ShieldCheck } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import LogoutDialog from '../components/LogoutDialog';
 import { Avatar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../services/api';
 import type { UserProfile } from '../types';
 
 export default function ProfilePage() {
-  const { auth, logout } = useAuth();
-  const navigate = useNavigate();
+  const { auth } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -39,13 +39,11 @@ export default function ProfilePage() {
       <button
         type="button"
         className="btn-ghost w-full !py-3 text-ball hover:!border-ball/40 hover:!bg-ball-soft"
-        onClick={() => {
-          logout();
-          navigate('/login');
-        }}
+        onClick={() => setConfirmLogout(true)}
       >
         <LogOut className="h-4 w-4" aria-hidden="true" /> Log out
       </button>
+      <LogoutDialog open={confirmLogout} onClose={() => setConfirmLogout(false)} />
     </div>
   );
 }

@@ -12,9 +12,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import LogoutDialog from './LogoutDialog';
 import { Avatar, Logo } from './ui';
 
 interface NavItem {
@@ -41,8 +42,8 @@ const adminLinks: NavItem[] = [
 ];
 
 export default function AppLayout() {
-  const { auth, isAdmin, logout } = useAuth();
-  const navigate = useNavigate();
+  const { auth, isAdmin } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const { pathname } = useLocation();
   const links = isAdmin ? adminLinks : userLinks;
   const home = isAdmin ? '/admin/dashboard' : '/dashboard';
@@ -50,11 +51,6 @@ export default function AppLayout() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [pathname]);
-
-  function onLogout() {
-    logout();
-    navigate(isAdmin ? '/admin/login' : '/login');
-  }
 
   return (
     <div className="min-h-screen">
@@ -107,7 +103,7 @@ export default function AppLayout() {
             <button
               type="button"
               className="rounded-xl p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-              onClick={onLogout}
+              onClick={() => setConfirmLogout(true)}
               aria-label="Log out"
               title="Log out"
             >
@@ -151,6 +147,7 @@ export default function AppLayout() {
           ))}
         </div>
       </nav>
+      <LogoutDialog open={confirmLogout} onClose={() => setConfirmLogout(false)} />
     </div>
   );
 }
