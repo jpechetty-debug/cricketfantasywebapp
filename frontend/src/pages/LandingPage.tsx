@@ -44,7 +44,7 @@ export default function LandingPage() {
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-[1.15fr_1fr] lg:pb-28 lg:pt-16">
           <div className="animate-slide-up">
             <p className="eyebrow mb-4 inline-flex items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-lime ring-1 ring-inset ring-white/10">
-              <span className="h-1.5 w-1.5 rounded-full bg-lime" /> Fantasy cricket for your local league
+              <span className="h-1.5 w-1.5 rounded-full bg-lime" /> Local cricket, now with a fantasy experience
             </p>
             <h1 className="display text-6xl sm:text-7xl lg:text-8xl">
               Pick 7.
@@ -54,7 +54,8 @@ export default function LandingPage() {
               Own the fantasy.
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-300">
-              Run a fantasy league for your Sunday matches. Friends pick squads, points come from the CricHeroes scorecard, and the leaderboard does the trash talk.
+              Turn your next local match into a fantasy experience. Make your weekend cricket more than just a match: friends pick squads, points come
+              from the CricHeroes scorecard, and the leaderboard does the trash talk.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/register" className="btn-lime px-7 py-3.5 text-base">
@@ -111,6 +112,19 @@ export default function LandingPage() {
         </section>
       </div>
 
+      <section className="bg-lime text-ink" aria-label="You play the match, we make it a fantasy">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 lg:flex-row lg:items-center lg:justify-between lg:py-12">
+          <p className="display text-4xl leading-[0.95] sm:text-5xl">
+            <span aria-hidden="true">🏏 </span>You play the match.
+            <br />
+            <span aria-hidden="true">🔥 </span>We make it a fantasy.
+          </p>
+          <p className="max-w-md text-base font-semibold leading-relaxed sm:text-lg">
+            You already argue about who is the best player… now put your prediction to the test. <span aria-hidden="true">😂</span>
+          </p>
+        </div>
+      </section>
+
       <div className="mx-auto max-w-6xl px-4 pt-12 empty:hidden lg:pt-16">
         <FeaturedPoster to="/register" cta="Join and pick your 7" />
       </div>
@@ -130,6 +144,20 @@ export default function LandingPage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="floodlit text-white">
+        <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between lg:py-16">
+          <div>
+            <h2 className="display text-4xl sm:text-5xl">
+              Your players. Your teams. <span className="text-lime">Your league.</span>
+            </h2>
+            <p className="mt-2 text-slate-300">Local cricket, now with a fantasy experience.</p>
+          </div>
+          <Link to="/register" className="btn-lime shrink-0 px-7 py-3.5 text-base">
+            Create your account <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
       </section>
 
       <footer className="border-t border-slate-200">
