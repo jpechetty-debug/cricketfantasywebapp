@@ -25,7 +25,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="floodlit text-white">
+      <div className="floodlit overflow-hidden text-white">
         <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5">
           <Link to="/" className="flex items-center gap-3">
             <Logo className="h-10 w-10" />

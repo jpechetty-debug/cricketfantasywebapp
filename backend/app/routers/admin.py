@@ -33,6 +33,25 @@ class Member(BaseModel):
     squads: int
 
 
+class EntryMember(BaseModel):
+    user_id: int
+    name: str
+    mobile: str
+    entered_at: UtcOutput | None = None
+
+
+class MatchEntries(BaseModel):
+    match_id: int
+    match_name: str
+    team_a: str
+    team_b: str
+    match_date: UtcOutput
+    status: str
+    members: int
+    entered: list[EntryMember]
+    missing: list[EntryMember]
+
+
 class MatchWinners(BaseModel):
     match_id: int
     match_name: str
@@ -98,3 +117,33 @@ def delete_user(user_id: int, _: User = Depends(require_admin), db: Session = De
     db.delete(user)
     db.commit()
     return {"deleted": user_id, "squads_removed": removed}
+
+
+@router.get("/entries", response_model=list[MatchEntries])
+def entries(_: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """For every match not yet completed (soonest first): which members have entered a squad and who still has to."""
+    members = db.query(User).filter(User.role == "user").order_by(User.name).all()
+    matches = db.query(Match).filter(Match.status != "closed").order_by(Match.match_date.asc()).all()
+    results = []
+    for match in matches:
+        entered_at = dict(db.query(FantasyTeam.user_id, FantasyTeam.created_at).filter(FantasyTeam.match_id == match.id))
+        entered = sorted(
+            (EntryMember(user_id=u.id, name=u.name, mobile=u.mobile, entered_at=entered_at[u.id]) for u in members if u.id in entered_at),
+            key=lambda m: m.entered_at,
+            reverse=True,
+        )
+        missing = [EntryMember(user_id=u.id, name=u.name, mobile=u.mobile) for u in members if u.id not in entered_at]
+        results.append(
+            MatchEntries(
+                match_id=match.id,
+                match_name=match.match_name,
+                team_a=match.team_a,
+                team_b=match.team_b,
+                match_date=match.match_date,
+                status=match.status,
+                members=len(members),
+                entered=entered,
+                missing=missing,
+            )
+        )
+    return results

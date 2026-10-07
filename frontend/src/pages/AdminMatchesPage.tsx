@@ -93,7 +93,7 @@ export default function AdminMatchesPage() {
       <PageHeader eyebrow="Admin console" title="Matches" subtitle="Schedule fixtures and control when squads lock." />
 
       <div className="grid items-start gap-8 lg:grid-cols-[380px_1fr]">
-        <form className="card space-y-4 lg:sticky lg:top-24" onSubmit={createMatch}>
+        <form className="card min-w-0 space-y-4 lg:sticky lg:top-24" onSubmit={createMatch}>
           <h2 className="display flex items-center gap-2 text-2xl">
             <CalendarPlus className="h-5 w-5 text-pitch-600" aria-hidden="true" /> New match
           </h2>
@@ -131,7 +131,7 @@ export default function AdminMatchesPage() {
           </button>
         </form>
 
-        <section aria-label="All matches">
+        <section className="min-w-0" aria-label="All matches">
           {loading ? (
             <RowSkeleton rows={4} />
           ) : matches.length === 0 ? (

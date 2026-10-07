@@ -11,6 +11,7 @@ import type {
   LeaderboardEntry,
   Member,
   Match,
+  MatchEntries,
   MatchStatus,
   MatchWinners,
   Player,
@@ -115,6 +116,7 @@ export const leaderboardApi = {
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
   winners: () => api.get<MatchWinners[]>('/admin/winners').then((r) => r.data),
+  entries: () => api.get<MatchEntries[]>('/admin/entries').then((r) => r.data),
   users: () => api.get<Member[]>('/admin/users').then((r) => r.data),
   deleteUser: (id: number) => api.delete(`/admin/users/${id}`).then((r) => r.data),
 };

@@ -69,6 +69,25 @@ export interface AdminStats {
   total_teams: number;
 }
 
+export interface EntryMember {
+  user_id: number;
+  name: string;
+  mobile: string;
+  entered_at: string | null;
+}
+
+export interface MatchEntries {
+  match_id: number;
+  match_name: string;
+  team_a: string;
+  team_b: string;
+  match_date: string;
+  status: MatchStatus;
+  members: number;
+  entered: EntryMember[];
+  missing: EntryMember[];
+}
+
 export interface MatchWinners {
   match_id: number;
   match_name: string;

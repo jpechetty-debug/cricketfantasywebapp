@@ -1,4 +1,4 @@
-import { ArrowRight, CloudDownload, PenLine, Phone, Shield, Swords, Trophy, Users } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, CloudDownload, PenLine, Phone, Shield, Swords, Trophy, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CardSkeleton, RowSkeleton } from '../components/Skeleton';
@@ -8,7 +8,7 @@ import { Avatar, EmptyState, PageHeader, RankBadge, SectionTitle, TeamCrest } fr
 import { useToast } from '../hooks/useToast';
 import { formatMatchDate, formatPoints } from '../lib/format';
 import { adminApi, apiError, matchApi } from '../services/api';
-import type { AdminStats, Match, MatchWinners } from '../types';
+import type { AdminStats, EntryMember, Match, MatchEntries, MatchWinners } from '../types';
 
 const ACTIONS = [
   { to: '/admin/matches', icon: Swords, title: 'Schedule a match', body: 'Create fixtures and open them for squads.' },
@@ -22,14 +22,16 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [results, setResults] = useState<MatchWinners[]>([]);
+  const [entries, setEntries] = useState<MatchEntries[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([adminApi.stats(), matchApi.list(), adminApi.winners()])
-      .then(([s, m, w]) => {
+    Promise.all([adminApi.stats(), matchApi.list(), adminApi.winners(), adminApi.entries()])
+      .then(([s, m, w, e]) => {
         setStats(s);
         setMatches(m);
         setResults(w);
+        setEntries(e);
       })
       .catch((err) => notify(apiError(err, 'Could not load admin data'), 'error'))
       .finally(() => setLoading(false));
@@ -52,6 +54,25 @@ export default function AdminDashboardPage() {
           <StatCard label="Squads entered" value={stats.total_teams} icon={<Shield className="h-5 w-5" />} />
         </div>
       )}
+
+      <section>
+        <SectionTitle title="Squad entries" />
+        {loading ? (
+          <RowSkeleton rows={2} />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<ClipboardCheck className="h-6 w-6" />}
+            title="No upcoming matches"
+            body="Schedule or import a match and you will see here who has picked a squad."
+          />
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {entries.map((entry) => (
+              <EntriesCard key={entry.match_id} entry={entry} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <section>
         <SectionTitle
@@ -171,5 +192,89 @@ export default function AdminDashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function EntriesCard({ entry }: { entry: MatchEntries }) {
+  const [tab, setTab] = useState<'missing' | 'entered'>('missing');
+  const done = entry.entered.length;
+  const pct = entry.members ? Math.round((done / entry.members) * 100) : 0;
+  const list = tab === 'entered' ? entry.entered : entry.missing;
+
+  return (
+    <article className="card min-w-0 p-0">
+      <header className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex -space-x-2">
+          <TeamCrest name={entry.team_a} size="md" />
+          <TeamCrest name={entry.team_b} size="md" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold text-ink">{entry.match_name}</p>
+          <p className="truncate text-xs font-medium text-slate-500">
+            {entry.team_a} vs {entry.team_b} · {formatMatchDate(entry.match_date)}
+          </p>
+        </div>
+        <StatusBadge status={entry.status} />
+      </header>
+
+      <div className="px-5 py-4">
+        <div className="flex items-end justify-between gap-3">
+          <p className="tabular font-display text-4xl font-extrabold text-ink">
+            {done}
+            <span className="text-xl text-slate-400"> / {entry.members}</span>
+          </p>
+          <p className="pb-1 text-sm font-semibold text-slate-500">members entered a squad · {pct}%</p>
+        </div>
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Squads entered">
+          <div className="h-full rounded-full bg-pitch-500 transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      <div className="mx-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label={`Members for ${entry.match_name}`}>
+        {(
+          [
+            ['missing', `Not yet (${entry.missing.length})`],
+            ['entered', `Entered (${done})`],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`rounded-lg py-2 text-xs font-bold transition ${tab === id ? 'bg-white text-ink shadow-sm' : 'text-slate-500 hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {list.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-slate-500">{tab === 'missing' ? 'Everyone has entered a squad.' : 'Nobody has entered a squad yet.'}</p>
+      ) : (
+        <ul className="mt-2 max-h-72 divide-y divide-slate-100 overflow-y-auto">
+          {list.map((m) => (
+            <MemberRow key={m.user_id} member={m} />
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
+
+function MemberRow({ member }: { member: EntryMember }) {
+  return (
+    <li className="flex items-center gap-3 px-5 py-2.5">
+      <Avatar name={member.name} className="h-8 w-8 text-xs" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-ink">{member.name}</p>
+        <a href={`tel:${member.mobile}`} className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-pitch-700">
+          <Phone className="h-3 w-3" aria-hidden="true" />
+          {member.mobile}
+        </a>
+      </div>
+      {member.entered_at && <p className="shrink-0 text-xs font-medium text-slate-400">{formatMatchDate(member.entered_at)}</p>}
+    </li>
   );
 }
