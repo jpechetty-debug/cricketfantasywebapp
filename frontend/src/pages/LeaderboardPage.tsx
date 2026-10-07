@@ -1,6 +1,7 @@
 import { Crown, Trophy } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import Confetti from '../components/Confetti';
 import { RowSkeleton } from '../components/Skeleton';
 import StatusBadge from '../components/StatusBadge';
 import { Avatar, EmptyState, PageHeader, RankBadge } from '../components/ui';
@@ -49,6 +50,24 @@ export default function LeaderboardPage() {
   const me = useMemo(() => rows.find((r) => r.user_id === auth?.userId) ?? null, [rows, auth?.userId]);
   const podium = rows.slice(0, 3);
   const loading = loadingMatches || loadingRows;
+  // Winners are only crowned once the match is completed and someone actually scored.
+  const finished = match?.status === 'closed' && rows.length > 0 && rows[0].points > 0;
+  const isWinner = (row: LeaderboardEntry) => finished && row.rank === 1;
+
+  // Celebrate once per completed match per visit, not on every re-render or refresh.
+  const [celebrate, setCelebrate] = useState(false);
+  const stopCelebrating = useCallback(() => setCelebrate(false), []);
+  useEffect(() => {
+    if (!finished || loadingRows || !matchId) return;
+    const key = `celebrated-${matchId}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      // Storage can be blocked (private mode); celebrating again is harmless.
+    }
+    setCelebrate(true);
+  }, [finished, loadingRows, matchId]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -95,7 +114,11 @@ export default function LeaderboardPage() {
                 const heights = ['h-20', 'h-28', 'h-14'];
                 return (
                   <div key={row.team_id} className="flex min-w-0 flex-col items-center text-center">
-                    {first && <Crown className="mb-1 h-6 w-6 text-gold" aria-hidden="true" />}
+                    {first && isWinner(row) ? (
+                      <span className="mb-1.5 animate-pop rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink shadow">🏆 Winner</span>
+                    ) : (
+                      first && <Crown className="mb-1 h-6 w-6 text-gold" aria-hidden="true" />
+                    )}
                     <Avatar name={row.name} className={first ? 'h-16 w-16 text-xl ring-4 ring-gold' : 'h-12 w-12 text-sm'} />
                     <p className="mt-2 w-full truncate text-sm font-bold">
                       {row.name}
@@ -121,7 +144,7 @@ export default function LeaderboardPage() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-ink">Your position</p>
                 <p className="text-xs font-medium text-slate-500">
-                  {me.rank === 1 ? 'Top of the table!' : `${formatPoints(rows[0].points - me.points)} pts behind the leader`}
+                  {isWinner(me) ? 'You won this match! 🏆' : me.rank === 1 ? 'Top of the table!' : `${formatPoints(rows[0].points - me.points)} pts behind the leader`}
                 </p>
               </div>
               <p className="tabular font-display text-3xl font-extrabold text-pitch-700">{formatPoints(me.points)}</p>
@@ -135,10 +158,15 @@ export default function LeaderboardPage() {
                 <li key={row.team_id} className={`flex items-center gap-4 px-5 py-3.5 ${isMe ? 'bg-pitch-50/70' : ''}`}>
                   <RankBadge rank={row.rank} />
                   <Avatar name={row.name} className="h-9 w-9 text-xs" />
-                  <p className="min-w-0 flex-1 truncate font-bold text-ink">
-                    {row.name}
-                    {isMe && <span className="chip ml-2 bg-pitch-600 px-2 py-0.5 text-[10px] text-white">You</span>}
-                  </p>
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <p className="min-w-0 truncate font-bold text-ink">{row.name}</p>
+                    {isMe && <span className="chip shrink-0 bg-pitch-600 px-2 py-0.5 text-[10px] text-white">You</span>}
+                    {isWinner(row) && (
+                      <span className="shrink-0 text-base leading-none" role="img" aria-label="Winner" title="Winner">
+                        🏆
+                      </span>
+                    )}
+                  </div>
                   <p className="tabular font-display text-xl font-extrabold text-ink">{formatPoints(row.points)}</p>
                 </li>
               );
@@ -146,6 +174,7 @@ export default function LeaderboardPage() {
           </ol>
         </div>
       )}
+      {celebrate && <Confetti onDone={stopCelebrating} />}
     </div>
   );
 }
