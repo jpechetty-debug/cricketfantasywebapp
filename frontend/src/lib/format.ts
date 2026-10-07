@@ -69,3 +69,9 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 export function byPlayerName(a: { player_name: string }, b: { player_name: string }) {
   return collator.compare(a.player_name, b.player_name);
 }
+
+/** Keep a 10-digit mobile number from whatever was typed, pasted or autofilled ("+91 98765 43210" -> "9876543210"). */
+export function toMobile(value: string) {
+  const digits = value.replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}

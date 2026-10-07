@@ -41,6 +41,7 @@ export default function AdminLoginPage() {
       eyebrow="Organisers"
       title="Admin login"
       subtitle="Manage fixtures, players and scoring."
+      teaser={false}
       aside={{
         headline: (
           <>
@@ -49,7 +50,7 @@ export default function AdminLoginPage() {
             <span className="text-lime">league.</span>
           </>
         ),
-        body: 'Schedule matches, maintain the player list and enter points after every game.',
+        body: 'Schedule matches, maintain the player list and import points from the CricHeroes scorecard.',
       }}
       footer={
         <Link to="/login" className="font-bold text-slate-500 hover:text-ink">

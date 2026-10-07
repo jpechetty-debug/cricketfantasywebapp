@@ -1,14 +1,18 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Phone, UserRound } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthShell, { Field, PasswordField } from '../components/AuthShell';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { toMobile } from '../lib/format';
 import { apiError, authApi } from '../services/api';
 
 export default function RegisterPage() {
   const { login } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +30,7 @@ export default function RegisterPage() {
       const data = await authApi.register({ name: name.trim(), mobile: mobile.trim(), password });
       login(data);
       notify('You’re in! Pick your first squad.', 'success');
-      navigate('/matches');
+      navigate(from ?? '/matches', { replace: true });
     } catch (err) {
       notify(apiError(err, 'Registration failed'), 'error');
     } finally {
@@ -52,25 +56,26 @@ export default function RegisterPage() {
       footer={
         <>
           Already playing?{' '}
-          <Link to="/login" className="font-bold text-pitch-700 hover:text-pitch-900">
+          <Link to="/login" state={location.state} className="font-bold text-pitch-700 hover:text-pitch-900">
             Log in
           </Link>
         </>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit}>
-        <Field label="Your name" autoComplete="name" placeholder="As your friends know you" value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
+        <Field label="Your name" autoComplete="name" placeholder="As your friends know you" icon={<UserRound aria-hidden="true" />} value={name} onChange={(e) => setName(e.target.value)} minLength={2} required />
         <Field
           label="Mobile number"
           type="tel"
           inputMode="numeric"
-          autoComplete="tel"
+          autoComplete="tel-national"
           placeholder="10-digit number"
+          icon={<Phone aria-hidden="true" />}
+          prefix="+91"
           pattern="[0-9]{10}"
           title="Exactly 10 digits"
-          maxLength={10}
           value={mobile}
-          onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+          onChange={(e) => setMobile(toMobile(e.target.value))}
           required
         />
         <PasswordField
