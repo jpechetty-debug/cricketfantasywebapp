@@ -255,7 +255,12 @@ export default function MatchPage() {
           <div className="space-y-3 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="display text-2xl">{editable ? 'Pick your 7' : 'Players'}</h2>
-              <span className="text-xs font-semibold text-slate-500">{visiblePlayers.length} shown</span>
+              <span className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                <Link to="/rules" className="font-bold text-pitch-700 hover:text-pitch-900">
+                  How points work
+                </Link>
+                {visiblePlayers.length} shown
+              </span>
             </div>
             <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by team">
               {['ALL', match.team_a, match.team_b].map((t) => (

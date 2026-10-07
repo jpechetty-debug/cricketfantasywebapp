@@ -15,6 +15,7 @@ import MatchesPage from './pages/MatchesPage';
 import MyTeamsPage from './pages/MyTeamsPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
+import RulesPage from './pages/RulesPage';
 
 // Admin screens are only needed by organisers, so keep them out of the main bundle.
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/my-teams" element={<MyTeamsPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/rules" element={<RulesPage />} />
             </Route>
 
             <Route

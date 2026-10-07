@@ -1,4 +1,4 @@
-import { ArrowRight, Medal, Shield, Swords, Trophy } from 'lucide-react';
+import { ArrowRight, BookOpen, Medal, Shield, Swords, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import FeaturedPoster from '../components/FeaturedPoster';
@@ -98,6 +98,17 @@ export default function DashboardPage() {
       </section>
 
       {!loading && <FeaturedPoster to={featuredLink.to} cta={featuredLink.cta} />}
+
+      <Link to="/rules" className="card-interactive group flex items-center gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime text-ink">
+          <BookOpen className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-ink">How points work</p>
+          <p className="text-sm text-slate-500">1 run = 1 point, wicket = 25, catch = 8. Captain 2×, vice-captain 1.5×.</p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5" aria-hidden="true" />
+      </Link>
 
       {/* Next match */}
       <section>

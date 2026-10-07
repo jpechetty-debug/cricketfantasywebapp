@@ -1,5 +1,6 @@
-import { CalendarDays, LogOut, Phone, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, CalendarDays, LogOut, Phone, ShieldCheck } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import LogoutDialog from '../components/LogoutDialog';
 import { Avatar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +36,12 @@ export default function ProfilePage() {
           value={profile ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '—'}
         />
       </dl>
+
+      <Link to="/rules" className="card-interactive flex items-center gap-3 !py-4">
+        <BookOpen className="h-5 w-5 text-pitch-600" aria-hidden="true" />
+        <span className="flex-1 font-bold text-ink">How points work</span>
+        <ArrowRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+      </Link>
 
       <button
         type="button"
