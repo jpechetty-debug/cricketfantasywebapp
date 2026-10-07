@@ -1,7 +1,7 @@
 import { ArrowRight, Crown, ListChecks, PenLine, Trophy } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import FeaturedPoster from '../components/FeaturedPoster';
-import { Logo, TeamCrest } from '../components/ui';
+import { Logo } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 
 const STEPS = [
@@ -11,12 +11,14 @@ const STEPS = [
   { icon: Trophy, title: 'Climb the table', body: 'The leaderboard updates instantly. Bragging rights until the next Sunday.' },
 ];
 
-const DEMO_SQUAD = [
-  { n: 'R. Sharma', r: 'BAT', c: 'C' },
-  { n: 'K. Rao', r: 'WK' },
-  { n: 'A. Patel', r: 'AR', c: 'VC' },
-  { n: 'S. Iyer', r: 'BAT' },
-  { n: 'M. Khan', r: 'BOWL' },
+// Mirrors RULES in backend/app/services/fantasy_points.py (see also RulesPage); update together.
+const SCORING = [
+  { icon: '🏏', value: '1', label: 'Per run', tone: 'bg-lime/30 text-ink' },
+  { icon: '🎯', value: '+1', label: 'Per four', tone: 'bg-sky-100 text-sky-900' },
+  { icon: '🚀', value: '+2', label: 'Per six', tone: 'bg-violet-100 text-violet-900' },
+  { icon: '🔥', value: '25', label: 'Wicket', tone: 'bg-rose-100 text-rose-900' },
+  { icon: '🙌', value: '8', label: 'Catch', tone: 'bg-amber-100 text-amber-900' },
+  { icon: '⚡', value: '12', label: 'Stumping', tone: 'bg-emerald-100 text-emerald-900' },
 ];
 
 export default function LandingPage() {
@@ -67,45 +69,40 @@ export default function LandingPage() {
             <p className="mt-6 text-sm text-slate-400">No wallets. No ads. Just cricket and bragging rights.</p>
           </div>
 
-          {/* Product preview */}
-          <div className="relative mx-auto w-full max-w-sm animate-slide-up [animation-delay:120ms]" aria-hidden="true">
-            <div className="absolute -inset-6 rounded-[2.5rem] bg-lime/10 blur-2xl" />
+          {/* Points cheat-sheet */}
+          <div className="relative mx-auto w-full max-w-sm animate-slide-up [animation-delay:120ms]">
+            <div className="absolute -inset-6 rounded-[2.5rem] bg-lime/10 blur-2xl" aria-hidden="true" />
             <div className="relative rounded-3xl bg-white p-5 text-ink shadow-lift">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sunday Local Derby</p>
-                <span className="chip bg-pitch-50 text-pitch-700 ring-1 ring-inset ring-pitch-200">Open</span>
+                <p className="font-display text-2xl font-extrabold uppercase leading-none">How you score</p>
+                <span className="chip bg-lime text-ink">Points</span>
               </div>
-              <div className="my-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TeamCrest name="Royal Strikers" size="md" />
-                  <span className="font-display text-lg font-bold uppercase">Strikers</span>
-                </div>
-                <span className="font-display text-sm font-extrabold text-slate-400">VS</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-display text-lg font-bold uppercase">Warriors</span>
-                  <TeamCrest name="Gully Warriors" size="md" />
-                </div>
-              </div>
-              <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                {DEMO_SQUAD.map((p) => (
-                  <li key={p.n} className="flex items-center gap-3 px-3 py-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 font-display text-xs font-extrabold">
-                      {p.n.split(' ')[1].slice(0, 2).toUpperCase()}
+              <ul className="mt-4 grid grid-cols-3 gap-2">
+                {SCORING.map((s) => (
+                  <li key={s.label} className={`flex flex-col items-center rounded-2xl px-1 py-3 text-center ${s.tone}`}>
+                    <span className="text-xl leading-none" aria-hidden="true">
+                      {s.icon}
                     </span>
-                    <span className="flex-1 text-sm font-bold">{p.n}</span>
-                    <span className="text-[11px] font-bold text-slate-400">{p.r}</span>
-                    {p.c && (
-                      <span className={`chip px-1.5 py-0 text-[10px] ${p.c === 'C' ? 'bg-ball text-white' : 'bg-gold text-ink'}`}>{p.c}</span>
-                    )}
+                    <span className="tabular mt-1.5 font-display text-2xl font-extrabold leading-none">{s.value}</span>
+                    <span className="mt-1 text-[11px] font-bold uppercase tracking-wide opacity-80">{s.label}</span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-white">
-                <span className="tabular font-display text-2xl font-extrabold">
-                  5<span className="text-slate-500">/7</span>
-                </span>
-                <span className="text-xs font-bold text-lime">Locks in 1d 4h</span>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 rounded-2xl bg-ball px-3 py-2.5 text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white font-black text-ball">C</span>
+                  <span className="font-display text-2xl font-extrabold">2×</span>
+                  <span className="text-[11px] font-bold uppercase leading-tight opacity-90">Captain</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-2xl bg-gold px-3 py-2.5 text-ink">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink text-[10px] font-black text-gold">VC</span>
+                  <span className="font-display text-2xl font-extrabold">1.5×</span>
+                  <span className="text-[11px] font-bold uppercase leading-tight opacity-80">Vice</span>
+                </div>
               </div>
+              <p className="mt-3 rounded-2xl bg-ink px-4 py-3 text-center text-xs font-semibold text-slate-300">
+                <span className="text-lime">+4</span> for every player in the XI · bonuses at <span className="text-lime">30, 50 & 100</span> runs
+              </p>
             </div>
           </div>
         </section>
