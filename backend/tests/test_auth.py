@@ -57,3 +57,48 @@ def test_non_admin_blocked_from_admin_routes(client, user_headers):
 def test_health(client):
     assert client.get("/api/health").json()["status"] == "ok"
     assert client.get("/health").status_code == 200
+
+
+def _change(client, headers, current, new):
+    return client.post("/api/auth/change-password", json={"current_password": current, "new_password": new}, headers=headers)
+
+
+def _admin_login(client, password):
+    return client.post("/api/auth/login", json={"mobile": "9999999999", "password": password}).status_code
+
+
+def test_admin_changes_own_password_and_it_survives_a_restart(client, admin_headers):
+    from app.database import SessionLocal
+    from app.seed import seed_database
+
+    assert _change(client, admin_headers, "test-admin-password", "brand-new-admin-pass").status_code == 200
+    assert _admin_login(client, "test-admin-password") == 401
+    assert _admin_login(client, "brand-new-admin-pass") == 200
+    # Render restarts the app often; the unchanged ADMIN_PASSWORD must not undo the change.
+    with SessionLocal() as db:
+        seed_database(db)
+    assert _admin_login(client, "brand-new-admin-pass") == 200
+    assert _admin_login(client, "test-admin-password") == 401
+
+
+def test_changing_admin_password_env_still_resets_it(client, admin_headers, monkeypatch):
+    from app.config import settings
+    from app.database import SessionLocal
+    from app.seed import seed_database
+
+    _change(client, admin_headers, "test-admin-password", "forgotten-in-app-pass")
+    monkeypatch.setattr(settings, "admin_password", "emergency-reset-pass")
+    with SessionLocal() as db:
+        seed_database(db)
+    assert _admin_login(client, "emergency-reset-pass") == 200
+    assert _admin_login(client, "forgotten-in-app-pass") == 401
+
+
+def test_change_password_rules(client, admin_headers, user_headers):
+    assert _change(client, admin_headers, "wrong-current", "brand-new-admin-pass").status_code == 400
+    assert _change(client, admin_headers, "test-admin-password", "short-pass1").status_code == 400  # admins need 12+
+    assert _change(client, admin_headers, "test-admin-password", "test-admin-password").status_code == 400
+    assert _change(client, admin_headers, "test-admin-password", "tiny").status_code == 422
+    assert client.post("/api/auth/change-password", json={"current_password": "x", "new_password": "long-enough-1"}).status_code == 401
+    # Members can change theirs too, with the normal 8-character minimum.
+    assert _change(client, user_headers, "secret-pass", "member-pass1").status_code == 200

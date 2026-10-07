@@ -75,6 +75,8 @@ export const authApi = {
   login: (payload: { mobile: string; password: string }) =>
     api.post<AuthResponse>('/auth/login', payload).then((r) => r.data),
   me: () => api.get<UserProfile>('/auth/me').then((r) => r.data),
+  changePassword: (payload: { current_password: string; new_password: string }) =>
+    api.post('/auth/change-password', payload).then((r) => r.data),
 };
 
 export const matchApi = {

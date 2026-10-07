@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   CloudDownload,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   PenLine,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import ChangePasswordDialog from './ChangePasswordDialog';
 import LogoutDialog from './LogoutDialog';
 import { Avatar, Logo } from './ui';
 
@@ -44,6 +46,7 @@ const adminLinks: NavItem[] = [
 export default function AppLayout() {
   const { auth, isAdmin } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const { pathname } = useLocation();
   const links = isAdmin ? adminLinks : userLinks;
   const home = isAdmin ? '/admin/dashboard' : '/dashboard';
@@ -100,6 +103,17 @@ export default function AppLayout() {
               <Avatar name={auth?.name || 'U'} className="h-8 w-8 text-xs" />
               <span className="max-w-[10rem] truncate text-sm font-semibold text-slate-200">{auth?.name}</span>
             </div>
+            {isAdmin && (
+              <button
+                type="button"
+                className="rounded-xl p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                onClick={() => setChangingPassword(true)}
+                aria-label="Change password"
+                title="Change password"
+              >
+                <KeyRound className="h-5 w-5" />
+              </button>
+            )}
             <button
               type="button"
               className="rounded-xl p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
@@ -148,6 +162,7 @@ export default function AppLayout() {
         </div>
       </nav>
       <LogoutDialog open={confirmLogout} onClose={() => setConfirmLogout(false)} />
+      <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
     </div>
   );
 }

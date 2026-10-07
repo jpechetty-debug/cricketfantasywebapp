@@ -1,9 +1,12 @@
+import hashlib
+import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.models.app_setting import AppSetting
 from app.models.match import Match
 from app.models.player import Player
 from app.models.user import User
@@ -54,13 +57,22 @@ def seed_database(db: Session) -> None:
 
 
 def ensure_admin(db: Session) -> None:
-    # The database (e.g. Neon) outlives deploys, so keep the configured admin in sync with the env on every start.
+    # The database (e.g. Neon) outlives deploys. ADMIN_PASSWORD is applied when it is new or has been changed in the
+    # host's settings, so a password the admin later changes in the app survives restarts, while editing the env var
+    # still works as a reset.
     configured = db.query(User).filter(User.mobile == settings.admin_mobile).first()
     if configured and settings.admin_password is not None:
-        if configured.role != "admin" or not verify_password(settings.admin_password, configured.password_hash):
-            configured.role = "admin"
-            configured.password_hash = hash_password(settings.admin_password)
-            logger.info("Updated admin %s from ADMIN_PASSWORD", settings.admin_mobile)
+        configured.role = "admin"
+        applied = db.get(AppSetting, ADMIN_PASSWORD_KEY)
+        fingerprint = _fingerprint(settings.admin_password)
+        if applied is None or not hmac.compare_digest(applied.value, fingerprint):
+            if not verify_password(settings.admin_password, configured.password_hash):
+                configured.password_hash = hash_password(settings.admin_password)
+                logger.info("Updated admin %s from ADMIN_PASSWORD", settings.admin_mobile)
+            if applied is None:
+                db.add(AppSetting(key=ADMIN_PASSWORD_KEY, value=fingerprint))
+            else:
+                applied.value = fingerprint
         return
     if configured or (settings.admin_password is None and db.query(User).filter(User.role == "admin").first()):
         return
@@ -79,6 +91,16 @@ def ensure_admin(db: Session) -> None:
             role="admin",
         )
     )
+    if settings.admin_password is not None:
+        db.merge(AppSetting(key=ADMIN_PASSWORD_KEY, value=_fingerprint(settings.admin_password)))
+
+
+ADMIN_PASSWORD_KEY = "admin_password_applied"
+
+
+def _fingerprint(password: str) -> str:
+    """Keyed hash of ADMIN_PASSWORD, so we can tell when it changes without storing it."""
+    return hmac.new(settings.secret_key.encode(), password.encode(), hashlib.sha256).hexdigest()
 
 
 def seed_demo_data(db: Session) -> None:
