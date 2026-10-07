@@ -8,7 +8,7 @@ from app.models.fantasy_team import FantasyTeam
 from app.models.match import Match
 from app.models.player_points import PlayerPoints
 from app.models.user import User
-from app.schemas.match import MatchCreate, MatchOut, MatchStatusUpdate
+from app.schemas.match import MatchCreate, MatchOut, MatchStatusUpdate, MatchTimeUpdate
 from app.services.teams import canonical_team
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -53,6 +53,23 @@ def update_match_status(
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
     match.status = payload.status
+    db.commit()
+    db.refresh(match)
+    return match
+
+
+@router.patch("/{match_id}/time", response_model=MatchOut)
+def update_match_time(
+    match_id: int,
+    payload: MatchTimeUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Move the start time; squads stay editable until it (while the match is open)."""
+    match = db.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    match.match_date = payload.match_date
     db.commit()
     db.refresh(match)
     return match

@@ -86,6 +86,8 @@ export const matchApi = {
     api.post<Match>('/matches', payload).then((r) => r.data),
   setStatus: (id: number, status: MatchStatus) =>
     api.patch<Match>(`/matches/${id}/status`, { status }).then((r) => r.data),
+  setTime: (id: number, match_date: string) =>
+    api.patch<Match>(`/matches/${id}/time`, { match_date }).then((r) => r.data),
   remove: (id: number) => api.delete(`/matches/${id}`).then((r) => r.data),
 };
 

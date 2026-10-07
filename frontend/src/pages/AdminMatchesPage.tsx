@@ -1,6 +1,6 @@
-import { CalendarPlus, Swords, Trash2 } from 'lucide-react';
+import { CalendarPlus, Clock, Swords, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ConfirmDialog } from '../components/Modal';
+import Modal, { ConfirmDialog } from '../components/Modal';
 import { RowSkeleton } from '../components/Skeleton';
 import StatusBadge from '../components/StatusBadge';
 import { EmptyState, PageHeader, TeamCrest } from '../components/ui';
@@ -15,6 +15,13 @@ const STATUSES: { id: MatchStatus; label: string; active: string }[] = [
   { id: 'closed', label: 'Completed', active: 'bg-ink text-white' },
 ];
 
+/** ISO timestamp -> "YYYY-MM-DDTHH:mm" in the browser's time zone, as datetime-local expects. */
+function toLocalInput(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function AdminMatchesPage() {
   const { notify } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
@@ -27,6 +34,9 @@ export default function AdminMatchesPage() {
   const [matchDate, setMatchDate] = useState('');
   const [toDelete, setToDelete] = useState<Match | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [toRetime, setToRetime] = useState<Match | null>(null);
+  const [newTime, setNewTime] = useState('');
+  const [retiming, setRetiming] = useState(false);
 
   const refresh = useCallback(async () => setMatches(await matchApi.list()), []);
 
@@ -70,6 +80,27 @@ export default function AdminMatchesPage() {
       notify(apiError(err, 'Could not update match'), 'error');
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function openRetime(match: Match) {
+    setToRetime(match);
+    setNewTime(toLocalInput(match.match_date));
+  }
+
+  async function saveRetime(e: FormEvent) {
+    e.preventDefault();
+    if (!toRetime || !newTime) return;
+    setRetiming(true);
+    try {
+      const updated = await matchApi.setTime(toRetime.id, new Date(newTime).toISOString());
+      await refresh();
+      notify(`${toRetime.match_name} now starts ${formatMatchDate(updated.match_date)}`, 'success');
+      setToRetime(null);
+    } catch (err) {
+      notify(apiError(err, 'Could not change start time'), 'error');
+    } finally {
+      setRetiming(false);
     }
   }
 
@@ -158,6 +189,15 @@ export default function AdminMatchesPage() {
                       <StatusBadge status={match.status} />
                       <button
                         type="button"
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-ink"
+                        onClick={() => openRetime(match)}
+                        aria-label={`Change start time of ${match.match_name}`}
+                        title="Change start time"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
                         className="rounded-lg p-2 text-slate-400 transition hover:bg-ball-soft hover:text-ball"
                         onClick={() => setToDelete(match)}
                         aria-label={`Delete ${match.match_name}`}
@@ -190,6 +230,27 @@ export default function AdminMatchesPage() {
           )}
         </section>
       </div>
+
+      <Modal open={toRetime !== null} onClose={() => setToRetime(null)} title="Change start time">
+        <form className="space-y-4" onSubmit={saveRetime}>
+          <p className="text-sm text-slate-600">
+            <strong className="text-ink">{toRetime?.match_name}</strong> ({toRetime?.team_a} vs {toRetime?.team_b})
+          </p>
+          <label className="block">
+            <span className="label">Start time</span>
+            <input className="input" type="datetime-local" value={newTime} onChange={(e) => setNewTime(e.target.value)} required />
+            <span className="mt-1.5 block text-xs text-slate-500">Last chance to save squads. They lock automatically at this time.</span>
+          </label>
+          {toRetime && toRetime.status !== 'open' && (
+            <p className="rounded-xl bg-gold-soft px-3 py-2 text-xs font-medium text-amber-900">
+              This match is {toRetime.status === 'locked' ? 'locked' : 'completed'}. Set it back to Open if members should still pick squads.
+            </p>
+          )}
+          <button className="btn-primary w-full !py-3" disabled={retiming || !newTime}>
+            {retiming ? 'Saving…' : 'Save start time'}
+          </button>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={toDelete !== null}

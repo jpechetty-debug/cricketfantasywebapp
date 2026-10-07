@@ -74,6 +74,24 @@ def test_match_auto_locks_after_start_time(client, user_headers, admin_headers):
     assert client.post("/api/teams", json=payload, headers=user_headers).status_code == 400
 
 
+def test_admin_moves_start_time_to_reopen_squads(client, user_headers, admin_headers):
+    past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    new_id = client.post(
+        "/api/matches",
+        json={"match_name": "Final", "team_a": "Team A", "team_b": "Team B", "match_date": past},
+        headers=admin_headers,
+    ).json()["id"]
+    payload = _team_payload(new_id, _players(client, user_headers, new_id))
+    assert client.post("/api/teams", json=payload, headers=user_headers).status_code == 400
+
+    later = datetime.now(timezone.utc) + timedelta(hours=5)
+    assert client.patch(f"/api/matches/{new_id}/time", json={"match_date": later.isoformat()}, headers=user_headers).status_code == 403
+    r = client.patch(f"/api/matches/{new_id}/time", json={"match_date": later.isoformat()}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["match_date"].startswith(later.strftime("%Y-%m-%dT%H:%M"))
+    assert client.post("/api/teams", json=payload, headers=user_headers).status_code == 200
+
+
 def test_points_update_leaderboard(client, user_headers, admin_headers, match_id):
     payload = _team_payload(match_id, _players(client, user_headers, match_id))
     client.post("/api/teams", json=payload, headers=user_headers)

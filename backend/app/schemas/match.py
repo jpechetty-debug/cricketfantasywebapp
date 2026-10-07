@@ -24,6 +24,10 @@ class MatchStatusUpdate(BaseModel):
     status: MatchStatus
 
 
+class MatchTimeUpdate(BaseModel):
+    match_date: UtcInput
+
+
 class MatchOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
