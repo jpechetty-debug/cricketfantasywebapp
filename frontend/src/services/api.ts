@@ -119,6 +119,7 @@ export const adminApi = {
   entries: () => api.get<MatchEntries[]>('/admin/entries').then((r) => r.data),
   users: () => api.get<Member[]>('/admin/users').then((r) => r.data),
   deleteUser: (id: number) => api.delete(`/admin/users/${id}`).then((r) => r.data),
+  resetPassword: (id: number, password: string) => api.post(`/admin/users/${id}/password`, { password }).then((r) => r.data),
 };
 
 // Fetching from CricHeroes can be slow, so these calls get a longer timeout.

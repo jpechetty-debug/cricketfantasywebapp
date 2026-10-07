@@ -44,3 +44,29 @@ def test_dashboard_shows_who_entered_a_squad(client, admin_headers, user_headers
     client.patch(f"/api/matches/{match_id}/status", json={"status": "closed"}, headers=admin_headers)
     assert client.get("/api/admin/entries", headers=admin_headers).json() == []
     assert client.get("/api/admin/entries", headers=user_headers).status_code == 403
+
+
+def test_admin_resets_a_member_password(client, admin_headers, user_headers):
+    match_id = client.get("/api/matches", headers=admin_headers).json()[0]["id"]
+    ids = [p["id"] for p in alternate_teams(client.get("/api/players", params={"match_id": match_id}, headers=admin_headers).json())]
+    body = {"match_id": match_id, "selected_players": ids[:7], "captain_id": ids[0], "vice_captain_id": ids[1]}
+    assert client.post("/api/teams", json=body, headers=user_headers).status_code == 200
+    [member] = client.get("/api/admin/users", headers=admin_headers).json()
+
+    r = client.post(f"/api/admin/users/{member['id']}/password", json={"password": "fresh-pass-42"}, headers=admin_headers)
+    assert r.status_code == 200
+    assert client.post("/api/auth/login", json={"mobile": "9876543210", "password": "secret-pass"}).status_code == 401
+    login = client.post("/api/auth/login", json={"mobile": "9876543210", "password": "fresh-pass-42"})
+    assert login.status_code == 200
+    # Squad survives the reset.
+    assert len(client.get("/api/teams/me", headers={"Authorization": f"Bearer {login.json()['access_token']}"}).json()) == 1
+
+
+def test_password_reset_rules(client, admin_headers, user_headers):
+    admin_id = client.get("/api/auth/me", headers=admin_headers).json()["id"]
+    member_id = client.get("/api/auth/me", headers=user_headers).json()["id"]
+    url = f"/api/admin/users/{member_id}/password"
+    assert client.post(url, json={"password": "short"}, headers=admin_headers).status_code == 422
+    assert client.post(url, json={"password": "long-enough-1"}, headers=user_headers).status_code == 403
+    assert client.post(f"/api/admin/users/{admin_id}/password", json={"password": "long-enough-1"}, headers=admin_headers).status_code == 400
+    assert client.post("/api/admin/users/99999/password", json={"password": "long-enough-1"}, headers=admin_headers).status_code == 404

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.models.match import Match
 from app.models.user import User
 from app.routers.leaderboard import ranked_entries
 from app.schemas.common import UtcOutput
+from app.services.auth import hash_password
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -31,6 +32,10 @@ class Member(BaseModel):
     mobile: str
     created_at: UtcOutput
     squads: int
+
+
+class PasswordReset(BaseModel):
+    password: str = Field(min_length=8, max_length=72)
 
 
 class EntryMember(BaseModel):
@@ -117,6 +122,19 @@ def delete_user(user_id: int, _: User = Depends(require_admin), db: Session = De
     db.delete(user)
     db.commit()
     return {"deleted": user_id, "squads_removed": removed}
+
+
+@router.post("/users/{user_id}/password")
+def reset_password(user_id: int, payload: PasswordReset, _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Give a member who forgot their password a new one; their squads and points are untouched."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Change the admin password in Render instead")
+    user.password_hash = hash_password(payload.password)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/entries", response_model=list[MatchEntries])
