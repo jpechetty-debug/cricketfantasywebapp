@@ -1,6 +1,7 @@
 import { ArrowLeft, Lock, Search, Timer, Trophy, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import AnnouncedSquads from '../components/AnnouncedSquads';
 import Modal from '../components/Modal';
 import PlayerRow from '../components/PlayerRow';
 import { RowSkeleton } from '../components/Skeleton';
@@ -9,6 +10,7 @@ import StatusBadge from '../components/StatusBadge';
 import { EmptyState, TeamCrest } from '../components/ui';
 import { useNow } from '../hooks/useNow';
 import { useToast } from '../hooks/useToast';
+import { isFeaturedMatch } from '../lib/featured';
 import { byPlayerName, formatCountdown, formatMatchDate, formatPoints, isMatchEditable } from '../lib/format';
 import { MAX_PER_TEAM, SQUAD_SIZE, teamTotal } from '../lib/squad';
 import { apiError, matchApi, playerApi, pointsApi, teamApi } from '../services/api';
@@ -250,82 +252,85 @@ export default function MatchPage() {
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
-        {/* Player pool */}
-        <section className="card overflow-hidden p-0" aria-label="Player pool">
-          <div className="space-y-3 border-b border-slate-100 p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="display text-2xl">{editable ? 'Pick your 7' : 'Players'}</h2>
-              <span className="flex items-center gap-3 text-xs font-semibold text-slate-500">
-                <Link to="/rules" className="font-bold text-pitch-700 hover:text-pitch-900">
-                  How points work
-                </Link>
-                {visiblePlayers.length} shown
-              </span>
-            </div>
-            <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by team">
-              {['ALL', match.team_a, match.team_b].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={teamFilter === t}
-                  onClick={() => setTeamFilter(t)}
-                  className={`flex-1 truncate rounded-lg px-3 py-2 text-xs font-bold transition ${
-                    teamFilter === t ? 'bg-white text-ink shadow-sm' : 'text-slate-500 hover:text-ink'
-                  }`}
-                >
-                  {t === 'ALL' ? 'Both teams' : t}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">
-                {ROLES.map((r) => (
+        <div className="min-w-0 space-y-4">
+          {isFeaturedMatch(match) && <AnnouncedSquads />}
+          {/* Player pool */}
+          <section className="card overflow-hidden p-0" aria-label="Player pool">
+            <div className="space-y-3 border-b border-slate-100 p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="display text-2xl">{editable ? 'Pick your 7' : 'Players'}</h2>
+                <span className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                  <Link to="/rules" className="font-bold text-pitch-700 hover:text-pitch-900">
+                    How points work
+                  </Link>
+                  {visiblePlayers.length} shown
+                </span>
+              </div>
+              <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by team">
+                {['ALL', match.team_a, match.team_b].map((t) => (
                   <button
-                    key={r}
+                    key={t}
                     type="button"
-                    aria-pressed={roleFilter === r}
-                    onClick={() => setRoleFilter(r)}
-                    className={`chip shrink-0 py-1.5 transition ${
-                      roleFilter === r ? 'bg-ink text-white' : 'bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:text-ink'
+                    role="tab"
+                    aria-selected={teamFilter === t}
+                    onClick={() => setTeamFilter(t)}
+                    className={`flex-1 truncate rounded-lg px-3 py-2 text-xs font-bold transition ${
+                      teamFilter === t ? 'bg-white text-ink shadow-sm' : 'text-slate-500 hover:text-ink'
                     }`}
                   >
-                    {r === 'ALL' ? 'All roles' : r}
+                    {t === 'ALL' ? 'Both teams' : t}
                   </button>
                 ))}
               </div>
-              <label className="relative flex-1">
-                <span className="sr-only">Search players</span>
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-                <input className="input !py-2 pl-9" placeholder="Search players" value={query} onChange={(e) => setQuery(e.target.value)} />
-              </label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      aria-pressed={roleFilter === r}
+                      onClick={() => setRoleFilter(r)}
+                      className={`chip shrink-0 py-1.5 transition ${
+                        roleFilter === r ? 'bg-ink text-white' : 'bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:text-ink'
+                      }`}
+                    >
+                      {r === 'ALL' ? 'All roles' : r}
+                    </button>
+                  ))}
+                </div>
+                <label className="relative flex-1">
+                  <span className="sr-only">Search players</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                  <input className="input !py-2 pl-9" placeholder="Search players" value={query} onChange={(e) => setQuery(e.target.value)} />
+                </label>
+              </div>
             </div>
-          </div>
 
-          {visiblePlayers.length === 0 ? (
-            <div className="p-6">
-              <EmptyState icon={<Users className="h-6 w-6" />} title="No players match" body="Try a different team, role, or search." />
-            </div>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {visiblePlayers.map((player) => (
-                <PlayerRow
-                  key={player.id}
-                  player={player}
-                  selected={selected.includes(player.id)}
-                  disabled={
-                    !selected.includes(player.id) &&
-                    (selected.length >= SQUAD_SIZE || (perTeam[player.team_name] ?? 0) >= MAX_PER_TEAM)
-                  }
-                  readOnly={!editable}
-                  points={points ? (points[player.id] ?? 0) : undefined}
-                  badge={player.id === captain ? 'C' : player.id === vice ? 'VC' : null}
-                  onToggle={() => toggle(player.id)}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
+            {visiblePlayers.length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={<Users className="h-6 w-6" />} title="No players match" body="Try a different team, role, or search." />
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {visiblePlayers.map((player) => (
+                  <PlayerRow
+                    key={player.id}
+                    player={player}
+                    selected={selected.includes(player.id)}
+                    disabled={
+                      !selected.includes(player.id) &&
+                      (selected.length >= SQUAD_SIZE || (perTeam[player.team_name] ?? 0) >= MAX_PER_TEAM)
+                    }
+                    readOnly={!editable}
+                    points={points ? (points[player.id] ?? 0) : undefined}
+                    badge={player.id === captain ? 'C' : player.id === vice ? 'VC' : null}
+                    onToggle={() => toggle(player.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
 
         {/* Squad panel (desktop) */}
         <aside className="card sticky top-24 hidden lg:block" aria-label="Your squad">
