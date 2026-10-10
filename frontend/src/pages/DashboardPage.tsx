@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpen, Medal, Shield, Swords, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AnnouncementCard from '../components/AnnouncementCard';
 import FeaturedPoster from '../components/FeaturedPoster';
 import MatchCard from '../components/MatchCard';
 import { CardSkeleton, RowSkeleton } from '../components/Skeleton';
@@ -66,6 +67,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-10">
+      <AnnouncementCard />
+
       {/* Hero */}
       <section className="floodlit relative overflow-hidden rounded-3xl p-6 text-white shadow-lift sm:p-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
