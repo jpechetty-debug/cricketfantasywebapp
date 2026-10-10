@@ -224,7 +224,8 @@ def _read_innings(match: ChMatch, text: str, team_by_key: dict[str, int], squads
             if dismissal:
                 match.dismissals.append((fielding_team, dismissal))
 
-        to_bat = re.search(r"To\s*Bat:\s*(.*)", rest)
+        # Stay on the same line: an empty "To Bat:" must not pick up the "Fall of Wickets" heading below it.
+        to_bat = re.search(r"To\s*Bat:[ \t]*(.*)", rest)
         if to_bat:
             for name in to_bat.group(1).split(","):
                 player(name, batting_team, played=False)

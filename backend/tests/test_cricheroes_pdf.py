@@ -99,6 +99,12 @@ def test_reads_players_with_squad_names_and_teams():
     assert players["Kiran"].team_id == match.team_b.cricheroes_team_id
 
 
+def test_empty_to_bat_list_does_not_read_the_next_heading_as_a_player():
+    # An all-out side has nobody left to bat, so its "To Bat:" line is empty.
+    match = parse_scorecard_text(TEXT.replace("To Bat: Dual Player", "To Bat:"), 777)
+    assert set(players_by_name(match)) == {"Bobby", "K V Vijay", "Suresh Reddy", "Dual Player", "Pran", "Kiran", "Arun Kumar"}
+
+
 def test_super_over_is_ignored():
     players = players_by_name(parse_scorecard_text(TEXT, 777))
     assert [(b.runs, b.balls) for b in players["Pran"].batting] == [(80, 35)]
